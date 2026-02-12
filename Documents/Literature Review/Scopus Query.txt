@@ -1,0 +1,14 @@
+TITLE-ABS-KEY(
+  "document clustering" OR "text clustering" OR "unsupervised text clustering"
+)
+AND TITLE-ABS-KEY(
+  "deep clustering" OR "deep embedded clustering" OR "representation learning"
+)
+AND TITLE-ABS-KEY(
+  transformer* OR "contextual embedding*" OR "semantic embedding*" 
+  OR "long-range semantic*" OR "document semantic*"
+)
+AND TITLE-ABS-KEY(
+  "neighborhood information" OR "local structure" OR "graph-based" 
+  OR "document relationship*" OR "similarity graph"
+)
