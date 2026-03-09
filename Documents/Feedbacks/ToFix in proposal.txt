@@ -1,0 +1,13 @@
+To fix:
+Done - 1.	Introduction
+“You need to be to the point and define problem and bottleneck in better understandable way. Presently – introduction is written in non-academic language; you need to follow the same language that you read in the papers you read from the LR. Your introduction should be end on the idea of your work and possible contributions.
+
+
+
+Done - 2.	Add 5 to 6 more papers (learning representation and structure using deep learning for document clustering.)
+
+3.	Add Literature Summary Table with following details:
+Research work (add reference and year); merits (write 2 sentences for which this work is good and relevant); Demerits (Shortcoming in the work that you intend to improve); dataset used; evaluation metrics used.
+
+Done - 4.	Research Gap and Research Questions 
+“This section is very good – you just need to add few sentences on how would you solve the research questions? What will be the evaluation metrics you will be using? “

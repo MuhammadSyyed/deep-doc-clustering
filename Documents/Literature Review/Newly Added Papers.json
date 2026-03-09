@@ -1,0 +1,68 @@
+[
+    {
+        "Year": 2024,
+        "Paper": "Enhancing Document Clustering with Hybrid Recurrent Neural Networks and Autoencoders: A Robust Approach for Effective Semantic Organization of Large Textual Datasets",
+        "Embedding Method": "Hybrid deep representation using RNNs for sequential dependency modeling and Autoencoders/Variational Autoencoders (VAE) for latent feature representation.",
+        "Clustering Strategy": "Hybrid RNN + VAE-based document clustering evaluated against traditional clustering approaches.",
+        "Evaluation Metrics": "Adjusted Rand Index (ARI), Normalized Mutual Information (NMI), Completeness, Homogeneity, V-measure, Accuracy. ",
+        "Dataset": "BBC Sports, Reuters-21578, 20-Newsgroups.",
+        "Strengths": "Strong performance and high accuracy on Sports (ARI 0.8166, Accuracy 92.57%) and Reuters (ARI 0.8488, Accuracy 72.74%), robust to noisy/unstructured data due to VAE latent space modeling.",
+        "Weaknesses": "Poor performance on diverse 20-Newsgroups dataset (ARI 0.2598, Accuracy 50.66%), limited adaptability to highly heterogeneous document collections.",
+        "Summary": "The paper proposes a hybrid RNN\u2013VAE document clustering model that captures sequential semantics and improves latent feature representation, achieving superior results over conventional methods on focused datasets but struggling with highly diverse corpora."
+    },
+    {
+        "Year": 2023,
+        "Paper": "Unleashing the Power of NLP and Transformers: A Game-Changer in Medical Research and Clinical Practice: Case Study: Cancer report classification by priority",
+        "Embedding Method": "BERT-based contextual embeddings with attention-based aggregation and GRU-derived patient embedding vectors.",
+        "Clustering Strategy": "Not clustering; supervised priority classification of radiological reports using a transformer-based pipeline.",
+        "Evaluation Metrics": "Accuracy, Precision, Recall, F1-score (per priority level).",
+        "Dataset": "1,000 cancer-related radiological reports (1,234,567 words; avg. 1,234 words/report).",
+        "Strengths": "High performance in priority classification (High: P=0.92, R=0.88, F1=0.90) demonstrating effective contextual modeling of medical text. ",
+        "Weaknesses": "Results limited to a specific dataset and training setup; requires further optimization, larger datasets, and real-world validation for generalizability.",
+        "Summary": "The study proposes a BERT-based transformer framework with attention and GRU mechanisms to generate report and patient embeddings for supervised classification of cancer radiology reports by priority, achieving strong precision, recall, and F1 performance across priority levels."
+    },
+    {
+        "Year": 2017,
+        "Paper": "Improved Deep Embedded Clustering with Local Structure Preservation",
+        "Embedding Method": "Under-complete autoencoder (pretrained with stacked denoising autoencoder) to learn low-dimensional representations while preserving local structure.",
+        "Clustering Strategy": "Joint optimization of KL-divergence\u2013based DEC clustering loss (Student\u2019s t-distribution soft assignments with self-training target distribution) and reconstruction loss (IDEC framework).",
+        "Evaluation Metrics": "Clustering Accuracy (ACC) and Normalized Mutual Information (NMI).",
+        "Dataset": "MNIST (70,000), USPS (9,298), REUTERS-10K (10,000 subset with 2,000-dim tf-idf features).",
+        "Strengths": "Preserves local data structure while clustering, consistently outperforming DEC and traditional methods across image and text datasets.",
+        "Weaknesses": "Converges slower than DEC due to reconstruction loss and requires tuning of clustering coefficient \u03b3 and learning rate coupling.",
+        "Summary": "The paper proposes IDEC, which integrates DEC\u2019s KL-based clustering loss with an under-complete autoencoder reconstruction loss to jointly learn cluster assignments and structure-preserving embeddings, achieving superior ACC and NMI over DEC on MNIST, USPS, and REUTERS-10K."
+    },
+    {
+        "Year": 2017,
+        "Paper": "Variational Deep Embedding: An Unsupervised and Generative Approach to Clustering",
+        "Embedding Method": "Variational Autoencoder (VAE) with a Gaussian Mixture Model (MoG) prior, where an encoder network learns latent embeddings regularized by a mixture-of-Gaussians manifold.",
+        "Clustering Strategy": "Generative clustering via VaDE by jointly optimizing ELBO with SGVB and reparameterization trick; cluster assignments computed as q(c|x)=p(c|z).",
+        "Evaluation Metrics": "Unsupervised Clustering Accuracy (ACC) and kNN error rate on latent space.",
+        "Dataset": "MNIST, HHAR, REUTERS-10K, REUTERS, STL-10.",
+        "Strengths": "Significantly outperforms GMM, AE+GMM, VAE+GMM, AAE, LDMGI, and DEC across 5 benchmarks and can generate realistic samples conditioned on clusters without supervision.",
+        "Weaknesses": "Requires pretraining to avoid poor local minima due to weak reconstruction term at early training stages. ",
+        "Summary": "VaDE integrates a VAE with a Gaussian Mixture prior to model the data generative process and perform unsupervised clustering by maximizing ELBO, achieving state-of-the-art clustering accuracy and enabling cluster-conditional sample generation."
+    },
+    {
+        "Year": 2020,
+        "Paper": "Feature-aware Unsupervised Learning with Joint Variational Attention and Automatic Clustering",
+        "Embedding Method": "Deep variational encoder-decoder with independent latent feature (z) and variational attention vector (a) distributions to enhance feature representation.",
+        "Clustering Strategy": "Feature-aware automatic clustering module using softmax-based cluster prediction on joint features (z+a) with KL-based cluster constraint and joint optimization objective.",
+        "Evaluation Metrics": "Clustering Accuracy (ACC) and Normalized Mutual Information (NMI).",
+        "Dataset": "Fashion-MNIST, CIFAR-10, USPS, 20NEWS, REUTERS, StackOverflow.",
+        "Strengths": "Joint optimization of variational attention, encoder-decoder reconstruction, and automatic clustering achieves superior ACC/NMI over DEC, IDEC, VaDE, and SpectralNet across six datasets.",
+        "Weaknesses": "Performance depends on balancing hyperparameter \u03bb and requires multi-loss optimization with additional clustering and attention modules.",
+        "Summary": "The paper proposes DVAEC, integrating variational attention and a feature-aware automatic clustering module within a joint optimization framework to improve deep feature representation and clustering performance, outperforming several state-of-the-art deep clustering methods."
+    },
+    {
+        "Year": 2019,
+        "Paper": "Learning Graph Embedding with Adversarial Training Methods",
+        "Embedding Method": "Graph Convolutional Network (GCN) encoder (and variational GCN) with adversarial regularization enforcing latent codes to match Gaussian or Uniform prior distributions.",
+        "Clustering Strategy": "K-means applied on learned graph embeddings (ARGA, ARVGA and decoder variants) after adversarially regularized autoencoding.",
+        "Evaluation Metrics": "Link prediction: AUC, Average Precision (AP); Clustering: Accuracy (Acc), NMI, F1, Precision, ARI.",
+        "Dataset": "Cora, Citeseer, PubMed citation networks.",
+        "Strengths": "Adversarial regularization improves robustness of latent representations and outperforms GAE/VGAE and other baselines in link prediction and node clustering across datasets.",
+        "Weaknesses": "Increased training time due to adversarial module; performance sensitivity to decoder design and prior distribution (e.g., ARGA DG with Uniform prior degrades).",
+        "Summary": "The paper proposes ARGA and ARVGA, integrating GCN-based (variational) graph autoencoders with adversarial training to regularize latent embeddings toward a prior distribution, achieving superior performance on link prediction and node clustering over multiple baselines."
+    }
+]

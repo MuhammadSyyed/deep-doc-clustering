@@ -1,0 +1,178 @@
+[
+    {
+        "Year": 2025,
+        "Paper": "Deep Transformer-based Structural Semantic Network for Document Clustering",
+        "Embedding Method": "Encoder only transformer for internal semantics with multi-head self attention and positional encoding while GCN used for external structured documents. Both embedding fused together layer wise and furhter refined through reinforcement learning",
+        "Clustering Strategy": "DEC-style soft assignment absed on Student's t-distribution. Optimized via KL-Divergence. A joint loss to tune both AE and GCN",
+        "Evaluation Metrics": "Accuracy ACC, Normalized Mutual Information NMI and Adjusted Rand Index ARI",
+        "Dataset": "BBC and ACM",
+        "Strengths": "Captured long term semantics (Inter Document Semantics) via Transformer-GCN Fusion (SOTA)",
+        "Weaknesses": "Scalability or Generalization, pretraining assumption, dependent on KNN quality. Static embeddings",
+        "Summary": "The DTSN model combines a Transformer encoder for internal semantic understanding with a GCN for external graph-based document relationships, fusing both representations layer-wise and refining them via reinforcement learning."
+    },
+    {
+        "Year": 2025,
+        "Paper": "Semantic Deep Embedded Clustering (SDEC)",
+        "Embedding Method": "Transformer-based BERT embeddings with pooling and normalization, fine-tuned via an autoencoder using combined MSE and cosine similarity loss",
+        "Clustering Strategy": "Deep Embedded Clustering with a Student\u2019s t-distribution soft assignment layer, KL-divergence loss, k-means++ initialization, followed by semantic refinement using cosine similarity thresholds",
+        "Evaluation Metrics": "Accuracy ACC, Normalized Mutual Information NMI and Adjusted Rand Index ARI",
+        "Dataset": "AG News, Yahoo! Answers, DBPedia, Reuters-2, Reuters-5 (English)",
+        "Strengths": "Preserves semantic structure through combined loss reconstruction and semantic refinement, consistently outperforming DEC/IDEC across multiple large scale benchmarks",
+        "Weaknesses": "Requires prior knowledge of number of clusters, high computational cost due to transformer embeddings, limited interpretability, and sensitivity to initialization and hyperparameters",
+        "Summary": "The paper proposed SDEC, an unsupervised text clustering framework that jointly optimizes semantic representation learning and clustering, achieving state-of-the-art results on five benchmark datasets by integrating transformer embeddings, deep clustering, and semantic refinement"
+    },
+    {
+        "Year": 2024,
+        "Paper": "Domain-Adapted Contrastive Learning for Enhanced Low-Resource Language Representations in Document Clustering Tasks",
+        "Embedding Method": "Domain-adapted Greek BERT and Greek Longformer using MLM and TSDAE for second-phase pre-training, followed by contrastive learning (triplet, contrastive, cosine similarity losses) with mean pooling and L2 normalization for document embeddings.",
+        "Clustering Strategy": "Hierarchical Agglomerative Clustering (HAC) and K-means applied on generated document embeddings, selecting cluster numbers via lowest SSE.",
+        "Evaluation Metrics": "Triplet/contrastive accuracy (Cosine, Manhattan, Euclidean) and Silhouette Coefficient (SC) for clustering goodness-of-fit.",
+        "Dataset": "Three manually collected Greek datasets (internet, social media, press) for domain adaptation (1.59M instances), contrastive learning (230,530 triplets), and clustering (283,052 documents; 3,393 keywords).",
+        "Strengths": "Significant clustering improvements (up to ~50% over base LM), effective combination of BERT (\u2264512 tokens) and Longformer (\u22644096 tokens), and strong performance across multiple domains using domain adaptation plus contrastive learning.",
+        "Weaknesses": "Heavy reliance on domain-specific data, high computational cost and long training time, limited validation on unseen domains, and sensitivity to contrastive learning hyperparameters.",
+        "Summary": "The paper proposes a domain-adapted contrastive learning framework combining Greek BERT and Longformer to enhance document clustering in a low-resource setting using MLM-based alignment and triplet-based contrastive training. Experiments on large manually curated Greek datasets show substantial clustering gains, especially when combining sequence-length-specialized models."
+    },
+    {
+        "Year": 2024,
+        "Paper": "Graph-Convolutional Networks: Named Entity Recognition and Large Language Model Embedding in Document Clustering",
+        "Embedding Method": "LLM-based document embeddings (e.g., GPT/BERT) as node features combined with NER-extracted entities and Word2Vec-based entity similarity for graph construction",
+        "Clustering Strategy": "NER-based document graph construction with entity-similarity thresholding followed by Graph Convolutional Clustering (GCC) with joint embedding\u2013clustering optimization and orthogonality constraints",
+        "Evaluation Metrics": "Accuracy ACC, Normalized Mutual Information NMI and Adjusted Rand Index ARI",
+        "Dataset": "BBC News, MLSUM, Arxiv-10, PubMed",
+        "Strengths": "Effectively integrates NER-based entity similarity and contextual LLM embeddings in a graph framework, significantly outperforming co-occurrence and KNN-based methods, especially for documents rich in named entities",
+        "Weaknesses": "Graph sparsity/density depends on entity thresholding and similarity constraints, requiring careful tuning of thresholds (e.g., \u03c4, minimum shared entities) and propagation parameter p",
+        "Summary": "The paper proposes a document clustering framework that constructs a named-entity similarity graph and applies joint graph convolutional embedding and clustering with LLM features, demonstrating superior performance over traditional and KNN-based graph approaches"
+    },
+    {
+        "Year": 2023,
+        "Paper": "Refined SBERT: Representing Sentence BERT in Manifold Space",
+        "Embedding Method": "Unsupervised SBERT (base/large) sentence embeddings refined via Neighborhood Preserving Embedding (NPE) to re-embed vectors into a manifold space preserving local geometric structure",
+        "Clustering Strategy": "K-Means applied on refined sentence embeddings for document clustering (20 Newsgroups)",
+        "Evaluation Metrics": "Spearman correlation (STS), classification accuracy (logistic regression), Normalized Mutual Information NMI and Adjusted Rand Index ARI",
+        "Dataset": "STS12\u201316, STS-B, SICK-R; MR, CR, SUBJ, MPQA, SST2, TREC, MRPC; 20 Newsgroups",
+        "Strengths": "Effectively models local manifold structure to align embedding similarity with human semantic judgment and achieves consistent improvements over SBERT and other baselines across similarity, classification, and clustering tasks",
+        "Weaknesses": "Performance depends on hyperparameters (embedding dimension and number of local neighbors) and introduces additional computational cost due to manifold learning step",
+        "Summary": "The paper proposes an unsupervised refinement of SBERT by re-embedding sentence vectors into a manifold space using NPE, demonstrating improved semantic consistency and superior performance on similarity, classification, and document clustering benchmarks"
+    },
+    {
+        "Year": 2022,
+        "Paper": "The performance of BERT as data representation of text clustering",
+        "Embedding Method": "Feature-based BERT (BERT-base uncased, 12 layers, 768 hidden size) with max/mean pooling and multiple normalization strategies, compared against TF-IDF",
+        "Clustering Strategy": "K-Means, Eigenspace-based Fuzzy C-Means (EFCM), Deep Embedded Clustering (DEC), and Improved DEC (IDEC)",
+        "Evaluation Metrics": "Accuracy ACC, Normalized Mutual Information NMI and Adjusted Rand Index ARI",
+        "Dataset": "AG News (4000 samples), Yahoo! Answers (10,000 samples), and Reuters R2 (5859 samples)",
+        "Strengths": "Systematic comparison of BERT vs TF-IDF across 36 metrics and multiple clustering models, showing BERT outperforms TF-IDF in 28/36 metrics and highlighting the impact of pooling/normalization choices",
+        "Weaknesses": "BERT does not consistently outperform TF-IDF on R2 with DEC/IDEC and performance is highly sensitive to feature extraction and normalization strategy",
+        "Summary": "The paper evaluates feature-based BERT as text representation for unsupervised clustering and demonstrates that, when combined with appropriate pooling and normalization, BERT generally yields superior clustering performance compared to TF-IDF across multiple algorithms and datasets"
+    },
+    {
+        "Year": 2022,
+        "Paper": "Deep Structural Enhanced Network for Document Clustering (DSEDC)",
+        "Embedding Method": "AE-based internal semantic representation + GCN-based external structural representation, enhanced via an ensemble-reinforced layer-by-layer strategy to learn enhanced internal and ensemble document representations",
+        "Clustering Strategy": "Student\u2019s t-distribution for soft assignment with KL divergence loss (Lclu), GCN-guided KL loss (Lgcn), reconstruction loss (Lres), and a joint objective function for end-to-end optimization",
+        "Evaluation Metrics": "Accuracy ACC, Normalized Mutual Information NMI and Adjusted Rand Index ARI",
+        "Dataset": "ACM, Citeseer, Reuters, BBC, Aminer-s",
+        "Strengths": "Enhances internal document semantics using external structural information through a layered reinforcement strategy and achieves substantial improvements over state-of-the-art methods across multiple document datasets",
+        "Weaknesses": "Additional external representations from early or late GCN layers may introduce noise in large-scale or densely linked datasets (e.g., Reuters, ACM), slightly degrading performance",
+        "Summary": "DSEDC is an end-to-end deep document clustering model that enhances AE-based internal semantic representations with GCN-based external structural information through an ensemble-reinforced layer-by-layer strategy. A joint objective function simultaneously optimizes representation learning and clustering, achieving superior performance on multiple real-world document datasets."
+    },
+    {
+        "Year": 2021,
+        "Paper": "Attention-driven Graph Clustering Network (AGCN)",
+        "Embedding Method": "Joint AE (node attribute feature) and GCN (topological graph feature) representations fused via attention-based heterogeneity-wise (AGCN-H) and scale-wise (AGCN-S) modules with reconstruction and KL alignment losses",
+        "Clustering Strategy": "End-to-end deep clustering using Student\u2019s t-distribution soft assignment with auxiliary target distribution and KL divergence optimization, directly predicting cluster labels from fused representation",
+        "Evaluation Metrics": "Accuracy ACC, Normalized Mutual Information NMI and Adjusted Rand Index ARI and F1-Score",
+        "Dataset": "USPS, HHAR, Reuters, ACM, CiteSeer, DBLP",
+        "Strengths": "Dynamically fuses attribute and structural features and multi-scale layer features via attention, jointly optimizes representation and clustering, and consistently outperforms SOTA methods especially on low-quality graphs",
+        "Weaknesses": "Performance gain is limited on well-connected graphs like ACM, and middle-layer features may suffer from over-smoothing without attention-based scale-wise weighting",
+        "Summary": "AGCN jointly learns node attribute and graph structural representations through attention-based heterogeneity-wise and multi-scale fusion, optimized via reconstruction and KL divergence losses in an unsupervised framework. Extensive experiments on six benchmarks demonstrate superior clustering performance over existing deep clustering methods."
+    },
+    {
+        "Year": 2021,
+        "Paper": "Deep Multi-View Document Clustering with Enhanced Semantic Embedding (MDCE)",
+        "Embedding Method": "Enhanced Semantic Embedders (ESEs) using Neighbour-based Autoencoder (NAE) and Cross-view Autoencoder (CAE) to map high-dimensional document views into low-dimensional spaces with neighbour-wise, view-wise, and cluster-wise complementary semantic information",
+        "Clustering Strategy": "Multi-Channel Deep Clustering Model (MCDC) with feature fusion (concatenation) and DEC-based clustering using Student\u2019s t-distribution and KL divergence for joint optimization and fine-tuning",
+        "Evaluation Metrics": "NMI and ACC",
+        "Dataset": "Aminer, Aminer(700), 3-sources, Reuters, Movies, Multi-source news",
+        "Strengths": "Addresses sparseness, high-dimensionality, and view inconsistency via complementary semantic enhancement; consistently outperforms state-of-the-art multi-view clustering models and shows stable convergence and robustness to initialization",
+        "Weaknesses": "Higher computational cost than simpler models; performance gain is smaller on high-quality datasets and AE-based methods are weaker on small datasets with many classes (e.g., Movies)",
+        "Summary": "MDCE integrates neighbour-wise, view-wise, and cluster-wise complementary semantics through NAE and CAE embedders and a DEC-based multi-channel deep clustering framework for end-to-end multi-view document clustering. Extensive experiments on six real-world datasets demonstrate consistent and significant improvements over existing multi-view clustering approaches."
+    },
+    {
+        "Year": 2020,
+        "Paper": "Structural Deep Clustering Network (SDCN)",
+        "Embedding Method": "Autoencoder-based deep representation learning integrated layer-wise with a Graph Convolutional Network (GCN) via a delivery operator, combining raw feature representations and structural information",
+        "Clustering Strategy": "Dual self-supervised deep clustering using Student\u2019s t-distribution soft assignments with KL divergence (DEC-style) jointly optimizing reconstruction loss and GCN-based clustering loss",
+        "Evaluation Metrics": "Accuracy ACC, Normalized Mutual Information NMI and Adjusted Rand Index ARI and F1-Score",
+        "Dataset": "USPS, HHAR, Reuters, ACM, DBLP, Citeseer (six real-world image, text, and graph datasets)",
+        "Strengths": "Explicitly integrates high-order structural information into deep clustering via GCN with theoretical justification, alleviates over-smoothing through the delivery operator, and achieves significant improvements over state-of-the-art baselines across all datasets",
+        "Weaknesses": "Performance depends on quality of constructed KNN graph (sensitive to noisy structure, e.g., Reuters case) and introduces additional model complexity due to dual modules and hyperparameters",
+        "Summary": "The paper proposes SDCN, a unified deep clustering framework that jointly learns feature representations and structural graph information through a layer-wise AE-GCN integration and dual self-supervised optimization, consistently outperforming existing deep and graph-based clustering methods"
+    },
+    {
+        "Year": 2024,
+        "Paper": "Enhancing Document Clustering with Hybrid Recurrent Neural Networks and Autoencoders: A Robust Approach for Effective Semantic Organization of Large Textual Datasets",
+        "Embedding Method": "Hybrid deep representation using RNNs for sequential dependency modeling and Autoencoders/Variational Autoencoders (VAE) for latent feature representation.",
+        "Clustering Strategy": "Hybrid RNN + VAE-based document clustering evaluated against traditional clustering approaches.",
+        "Evaluation Metrics": "Adjusted Rand Index (ARI), Normalized Mutual Information (NMI), Completeness, Homogeneity, V-measure, Accuracy. ",
+        "Dataset": "BBC Sports, Reuters-21578, 20-Newsgroups.",
+        "Strengths": "Strong performance and high accuracy on Sports (ARI 0.8166, Accuracy 92.57%) and Reuters (ARI 0.8488, Accuracy 72.74%), robust to noisy/unstructured data due to VAE latent space modeling.",
+        "Weaknesses": "Poor performance on diverse 20-Newsgroups dataset (ARI 0.2598, Accuracy 50.66%), limited adaptability to highly heterogeneous document collections.",
+        "Summary": "The paper proposes a hybrid RNN\u2013VAE document clustering model that captures sequential semantics and improves latent feature representation, achieving superior results over conventional methods on focused datasets but struggling with highly diverse corpora."
+    },
+    {
+        "Year": 2023,
+        "Paper": "Unleashing the Power of NLP and Transformers: A Game-Changer in Medical Research and Clinical Practice: Case Study: Cancer report classification by priority",
+        "Embedding Method": "BERT-based contextual embeddings with attention-based aggregation and GRU-derived patient embedding vectors.",
+        "Clustering Strategy": "Not clustering; supervised priority classification of radiological reports using a transformer-based pipeline.",
+        "Evaluation Metrics": "Accuracy, Precision, Recall, F1-score (per priority level).",
+        "Dataset": "1,000 cancer-related radiological reports (1,234,567 words; avg. 1,234 words/report).",
+        "Strengths": "High performance in priority classification (High: P=0.92, R=0.88, F1=0.90) demonstrating effective contextual modeling of medical text. ",
+        "Weaknesses": "Results limited to a specific dataset and training setup; requires further optimization, larger datasets, and real-world validation for generalizability.",
+        "Summary": "The study proposes a BERT-based transformer framework with attention and GRU mechanisms to generate report and patient embeddings for supervised classification of cancer radiology reports by priority, achieving strong precision, recall, and F1 performance across priority levels."
+    },
+    {
+        "Year": 2017,
+        "Paper": "Improved Deep Embedded Clustering with Local Structure Preservation",
+        "Embedding Method": "Under-complete autoencoder (pretrained with stacked denoising autoencoder) to learn low-dimensional representations while preserving local structure.",
+        "Clustering Strategy": "Joint optimization of KL-divergence\u2013based DEC clustering loss (Student\u2019s t-distribution soft assignments with self-training target distribution) and reconstruction loss (IDEC framework).",
+        "Evaluation Metrics": "Clustering Accuracy (ACC) and Normalized Mutual Information (NMI).",
+        "Dataset": "MNIST (70,000), USPS (9,298), REUTERS-10K (10,000 subset with 2,000-dim tf-idf features).",
+        "Strengths": "Preserves local data structure while clustering, consistently outperforming DEC and traditional methods across image and text datasets.",
+        "Weaknesses": "Converges slower than DEC due to reconstruction loss and requires tuning of clustering coefficient \u03b3 and learning rate coupling.",
+        "Summary": "The paper proposes IDEC, which integrates DEC\u2019s KL-based clustering loss with an under-complete autoencoder reconstruction loss to jointly learn cluster assignments and structure-preserving embeddings, achieving superior ACC and NMI over DEC on MNIST, USPS, and REUTERS-10K."
+    },
+    {
+        "Year": 2017,
+        "Paper": "Variational Deep Embedding: An Unsupervised and Generative Approach to Clustering",
+        "Embedding Method": "Variational Autoencoder (VAE) with a Gaussian Mixture Model (MoG) prior, where an encoder network learns latent embeddings regularized by a mixture-of-Gaussians manifold.",
+        "Clustering Strategy": "Generative clustering via VaDE by jointly optimizing ELBO with SGVB and reparameterization trick; cluster assignments computed as q(c|x)=p(c|z).",
+        "Evaluation Metrics": "Unsupervised Clustering Accuracy (ACC) and kNN error rate on latent space.",
+        "Dataset": "MNIST, HHAR, REUTERS-10K, REUTERS, STL-10.",
+        "Strengths": "Significantly outperforms GMM, AE+GMM, VAE+GMM, AAE, LDMGI, and DEC across 5 benchmarks and can generate realistic samples conditioned on clusters without supervision.",
+        "Weaknesses": "Requires pretraining to avoid poor local minima due to weak reconstruction term at early training stages. ",
+        "Summary": "VaDE integrates a VAE with a Gaussian Mixture prior to model the data generative process and perform unsupervised clustering by maximizing ELBO, achieving state-of-the-art clustering accuracy and enabling cluster-conditional sample generation."
+    },
+    {
+        "Year": 2020,
+        "Paper": "Feature-aware Unsupervised Learning with Joint Variational Attention and Automatic Clustering",
+        "Embedding Method": "Deep variational encoder-decoder with independent latent feature (z) and variational attention vector (a) distributions to enhance feature representation.",
+        "Clustering Strategy": "Feature-aware automatic clustering module using softmax-based cluster prediction on joint features (z+a) with KL-based cluster constraint and joint optimization objective.",
+        "Evaluation Metrics": "Clustering Accuracy (ACC) and Normalized Mutual Information (NMI).",
+        "Dataset": "Fashion-MNIST, CIFAR-10, USPS, 20NEWS, REUTERS, StackOverflow.",
+        "Strengths": "Joint optimization of variational attention, encoder-decoder reconstruction, and automatic clustering achieves superior ACC/NMI over DEC, IDEC, VaDE, and SpectralNet across six datasets.",
+        "Weaknesses": "Performance depends on balancing hyperparameter \u03bb and requires multi-loss optimization with additional clustering and attention modules.",
+        "Summary": "The paper proposes DVAEC, integrating variational attention and a feature-aware automatic clustering module within a joint optimization framework to improve deep feature representation and clustering performance, outperforming several state-of-the-art deep clustering methods."
+    },
+    {
+        "Year": 2019,
+        "Paper": "Learning Graph Embedding with Adversarial Training Methods",
+        "Embedding Method": "Graph Convolutional Network (GCN) encoder (and variational GCN) with adversarial regularization enforcing latent codes to match Gaussian or Uniform prior distributions.",
+        "Clustering Strategy": "K-means applied on learned graph embeddings (ARGA, ARVGA and decoder variants) after adversarially regularized autoencoding.",
+        "Evaluation Metrics": "Link prediction: AUC, Average Precision (AP); Clustering: Accuracy (Acc), NMI, F1, Precision, ARI.",
+        "Dataset": "Cora, Citeseer, PubMed citation networks.",
+        "Strengths": "Adversarial regularization improves robustness of latent representations and outperforms GAE/VGAE and other baselines in link prediction and node clustering across datasets.",
+        "Weaknesses": "Increased training time due to adversarial module; performance sensitivity to decoder design and prior distribution (e.g., ARGA DG with Uniform prior degrades).",
+        "Summary": "The paper proposes ARGA and ARVGA, integrating GCN-based (variational) graph autoencoders with adversarial training to regularize latent embeddings toward a prior distribution, achieving superior performance on link prediction and node clustering over multiple baselines."
+    }
+]

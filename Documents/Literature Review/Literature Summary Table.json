@@ -1,0 +1,130 @@
+[
+  {
+    "Reference": "[1]",
+    "year": 2020,
+    "merits": "Integrates AE and GCN in unified deep clustering\n dual self-supervised KL optimization\n strong gains across 6 datasets.",
+    "Demerits": "Sensitive to KNN graph quality\n added model complexity and hyperparameter tuning.",
+    "dataset_used": "USPS\n HHAR\n Reuters\n ACM\n DBLP\n Citeseer",
+    "evaluation_metrics_used": "ACC\n NMI\n ARI\n F1"
+  },
+  {
+    "Reference": "[2]",
+    "year": 2022,
+    "merits": "Enhances AE semantics using GCN structural info\n layer-wise ensemble reinforcement\n strong multi-dataset improvement.",
+    "Demerits": "Early/late GCN layers may introduce noise\n performance degradation on large/dense graphs.",
+    "dataset_used": "ACM\n Citeseer\n Reuters\n BBC\n Aminer-s",
+    "evaluation_metrics_used": "ACC\n NMI\n ARI"
+  },
+  {
+    "Reference": "[3]",
+    "year": 2021,
+    "merits": "Attention-based fusion of attribute and structural features\n multi-scale representation learning\n robust on low-quality graphs.",
+    "Demerits": "Limited gains on well-connected graphs\n middle layers prone to over-smoothing.",
+    "dataset_used": "USPS\n HHAR\n Reuters\n ACM\n CiteSeer\n DBLP",
+    "evaluation_metrics_used": "ACC\n NMI\n ARI\n F1"
+  },
+  {
+    "Reference": "[4]",
+    "year": 2025,
+    "merits": "Joint transformer-based semantic learning and DEC clustering\n semantic refinement improves performance\n SOTA on 5 benchmarks.",
+    "Demerits": "Requires predefined cluster number\n high computational cost\n sensitive to initialization.",
+    "dataset_used": "AG News\n Yahoo! Answers\n DBPedia\n Reuters-2\n Reuters-5",
+    "evaluation_metrics_used": "ACC\n NMI\n ARI"
+  },
+  {
+    "Reference": "[5]",
+    "year": 2025,
+    "merits": "Transformer-GCN fusion for inter-document semantics\n layer-wise fusion with reinforcement learning\n strong results on BBC/ACM.",
+    "Demerits": "Dependent on KNN graph quality\n scalability/generalization issues\n static embeddings.",
+    "dataset_used": "BBC\n ACM",
+    "evaluation_metrics_used": "ACC\n NMI\n ARI"
+  },
+  {
+    "Reference": "[6]",
+    "year": 2024,
+    "merits": "NER-based graph construction with LLM embeddings\n joint embedding-clustering optimization\n outperforms KNN graphs.",
+    "Demerits": "Graph sparsity sensitive to thresholding\n requires careful tuning of τ and p.",
+    "dataset_used": "BBC News\n MLSUM\n Arxiv-10\n PubMed",
+    "evaluation_metrics_used": "ACC\n NMI\n ARI"
+  },
+  {
+    "Reference": "[7]",
+    "year": 2021,
+    "merits": "Multi-view semantic enhancement via NAE/CAE\n DEC-based joint optimization\n stable convergence.",
+    "Demerits": "Higher computational cost\n weaker on small/high-class datasets.",
+    "dataset_used": "Aminer\n Aminer(700)\n 3-sources\n Reuters\n Movies\n Multi-source news",
+    "evaluation_metrics_used": "NMI\n ACC"
+  },
+  {
+    "Reference": "[8]",
+    "year": 2023,
+    "merits": "Manifold refinement of SBERT embeddings\n improved semantic consistency\n consistent gains across tasks.",
+    "Demerits": "Hyperparameter sensitive\n added computational cost.",
+    "dataset_used": "STS12-16\n STS-B\n SICK-R\n MR\n CR\n SUBJ\n MPQA\n SST2\n TREC\n MRPC\n 20 Newsgroups",
+    "evaluation_metrics_used": "Spearman\n Acc\n NMI\n ARI"
+  },
+  {
+    "Reference": "[9]",
+    "year": 2022,
+    "merits": "Systematic BERT vs TF-IDF comparison\n strong gains in 28/36 metrics\n highlights pooling/normalization impact.",
+    "Demerits": "Inconsistent gains on R2 with DEC/IDEC\n sensitive to normalization strategy.",
+    "dataset_used": "AG News (4000)\n Yahoo! Answers (10000)\n Reuters R2 (5859)",
+    "evaluation_metrics_used": "ACC\n NMI\n ARI"
+  },
+  {
+    "Reference": "[10]",
+    "year": 2025,
+    "merits": "Domain-adapted contrastive learning\n large-scale Greek corpora\n up to ~50% clustering gains.",
+    "Demerits": "Heavy domain dependence\n high computational cost\n hyperparameter sensitive\n not integrated deep clustering.",
+    "dataset_used": "Greek internet/social/press corpora (1.59M\n 230,530 triplets\n 283,052 docs)",
+    "evaluation_metrics_used": "SC\n Cosine\n Manhattan\n Euclidean"
+  },
+  {
+    "Reference": "[11]",
+    "year": 2017,
+    "merits": "Preserves local structure via reconstruction\n joint KL and AE loss\n outperforms DEC.",
+    "Demerits": "Slower convergence\n requires γ tuning.",
+    "dataset_used": "MNIST (70000)\n USPS (9298)\n REUTERS-10K (10000)",
+    "evaluation_metrics_used": "ACC\n NMI"
+  },
+  {
+    "Reference": "[12]",
+    "year": 2017,
+    "merits": "VAE with GMM prior for generative clustering\n strong ACC across 5 datasets\n cluster-conditional generation.",
+    "Demerits": "Requires pretraining\n risk of poor local minima early training.",
+    "dataset_used": "MNIST\n HHAR\n REUTERS-10K\n REUTERS\n STL-10",
+    "evaluation_metrics_used": "ACC\n kNN"
+  },
+  {
+    "Reference": "[13]",
+    "year": 2020,
+    "merits": "Joint variational attention and clustering\n multi-loss optimization\n superior ACC/NMI over DEC/IDEC/VaDE.",
+    "Demerits": "Hyperparameter λ sensitive\n complex multi-loss balancing.",
+    "dataset_used": "Fashion-MNIST\n CIFAR-10\n USPS\n 20NEWS\n REUTERS\n StackOverflow",
+    "evaluation_metrics_used": "ACC\n NMI"
+  },
+  {
+    "Reference": "[14]",
+    "year": 2019,
+    "merits": "Adversarial regularization improves embedding robustness\n superior link prediction and clustering.",
+    "Demerits": "Increased training time\n sensitive to decoder/prior choice.",
+    "dataset_used": "Cora\n Citeseer\n PubMed",
+    "evaluation_metrics_used": "Acc\n NMI\n F1\n ARI\n AUC\n AP"
+  },
+  {
+    "Reference": "[15]",
+    "year": 2024,
+    "merits": "Hybrid RNN-VAE captures sequential semantics\n strong ARI/Acc on Sports/Reuters\n robust to noise.",
+    "Demerits": "Poor generalization on heterogeneous datasets (20-Newsgroups).",
+    "dataset_used": "BBC Sports\n Reuters-21578\n 20-Newsgroups",
+    "evaluation_metrics_used": "ARI\n NMI\n Completeness\n Homogeneity\n V-measure\n Acc"
+  },
+  {
+    "Reference": "[16]",
+    "year": 2023,
+    "merits": "Effective contextual modeling with BERT+GRU\n high P/R/F1 in medical classification.",
+    "Demerits": "Dataset-specific\n requires larger validation\n not clustering.",
+    "dataset_used": "1000 cancer radiology reports",
+    "evaluation_metrics_used": "Acc\n P\n R\n F1"
+  }
+]
