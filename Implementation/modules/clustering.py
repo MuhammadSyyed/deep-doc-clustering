@@ -1,26 +1,33 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from sklearn.cluster import KMeans
-from sklearn.preprocessing import normalize
-from sklearn.neighbors import NearestNeighbors
-from sklearn.model_selection import train_test_split
-
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy.optimize import linear_sum_assignment
+from sklearn.metrics import confusion_matrix
+import faiss
+import scipy.sparse as sp
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parameter import Parameter
+from torch.nn.modules.module import Module
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
 
+
+def target_distribution(q):
+    weight = q ** 2 / torch.sum(q, dim=0)
+    return (weight.t() / torch.sum(weight, dim=1)).t()
 
 class BaseClusterer(ABC):
     def __init__(self, cfg: dict):
         self.cfg = cfg
 
     @abstractmethod
-    def fit_predict(self, embeddings: np.ndarray, k: int) -> np.ndarray:
+    def fit_predict(self, embeddings: np.ndarray, k: int, true_labels=None) -> np.ndarray:
         pass
 
-
 class KMeansClusterer(BaseClusterer):
-    def fit_predict(self, embeddings: np.ndarray, k: int) -> np.ndarray:
+    def fit_predict(self, embeddings: np.ndarray, k: int, true_labels=None) -> np.ndarray:
         c = self.cfg.get("kmeans", {})
         model = KMeans(
             n_clusters=k,
@@ -30,379 +37,401 @@ class KMeansClusterer(BaseClusterer):
         )
         return model.fit_predict(embeddings)
 
-
-class AutoEncoder(nn.Module):
-    def __init__(self, in_dim, hidden_dim, latent_dim):
-        super().__init__()
-        self.encoder = nn.Sequential(
-            nn.Linear(in_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(hidden_dim, latent_dim),
-        )
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, in_dim),
-        )
-
-    def forward(self, x):
-        z = self.encoder(x)
-        x_hat = self.decoder(z)
-        return z, x_hat
-
-
-class AEClusterer(BaseClusterer):
-    def fit_predict(self, embeddings: np.ndarray, k: int) -> np.ndarray:
-        c = self.cfg.get("ae", {})
-
-        device = torch.device(c.get("device", "cpu"))
-        X = torch.tensor(embeddings, dtype=torch.float32).to(device)
-
-        model = AutoEncoder(
-            X.shape[1],
-            c.get("hidden_dim", 256),
-            c.get("latent_dim", 64),
-        ).to(device)
-
-        opt = torch.optim.Adam(
-            model.parameters(),
-            lr=c.get("lr", 1e-3),
-            weight_decay=1e-5
-        )
-
-        min_delta = float(c.get("min_delta", 1e-4))
-        patience = int(c.get("patience", 20))
-
-        best_loss = float("inf")
-        counter = 0
-        best_state = None
-
-        for _ in range(c.get("epochs", 500)):
-            z, x_hat = model(X)
-
-            loss = F.mse_loss(x_hat, X)
-
-            opt.zero_grad()
-            loss.backward()
-            opt.step()
-
-            curr_loss = loss.item()
-
-            if curr_loss < best_loss - min_delta:
-                best_loss = curr_loss
-                counter = 0
-                best_state = model.state_dict()
-            else:
-                counter += 1
-
-            if counter >= patience:
-                print("AE early stopping triggered")
-                break
-
-        if best_state:
-            model.load_state_dict(best_state)
-
-        with torch.no_grad():
-            z, _ = model(X)
-            Z = z.cpu().numpy()
-
-        Z = normalize(Z)
-
-        km = KMeans(n_clusters=k, n_init=20, random_state=42)
-        labels = km.fit_predict(Z)
-
-        self.probs_ = None
-        return labels
-
-    def predict_proba(self):
-        return getattr(self, "probs_", None)
-
-
-class IDEC(nn.Module):
-    def __init__(self, in_dim, hidden_dim, latent_dim, n_clusters, alpha=1.0):
+class DECAE(nn.Module):
+    def __init__(self, n_input, n_enc_1=500, n_enc_2=500, n_enc_3=2000, n_z=64):
         super().__init__()
 
-        self.encoder = nn.Sequential(
-            nn.Linear(in_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(hidden_dim, latent_dim),
-        )
+        # Encoder
+        self.enc_1 = nn.Linear(n_input, n_enc_1)
+        self.enc_2 = nn.Linear(n_enc_1, n_enc_2)
+        self.enc_3 = nn.Linear(n_enc_2, n_enc_3)
+        self.z_layer = nn.Linear(n_enc_3, n_z)
 
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, in_dim),
-        )
+        # Decoder
+        self.dec_1 = nn.Linear(n_z, n_enc_3)
+        self.dec_2 = nn.Linear(n_enc_3, n_enc_2)
+        self.dec_3 = nn.Linear(n_enc_2, n_enc_1)
+        self.x_bar = nn.Linear(n_enc_1, n_input)
 
-        self.alpha = alpha
-        self.centers = nn.Parameter(torch.randn(n_clusters, latent_dim))
+    def encode(self, x):
+        h1 = F.relu(self.enc_1(x))
+        h2 = F.relu(self.enc_2(h1))
+        h3 = F.relu(self.enc_3(h2))
+        z = self.z_layer(h3)
+        return z
+
+    def decode(self, z):
+        d1 = F.relu(self.dec_1(z))
+        d2 = F.relu(self.dec_2(d1))
+        d3 = F.relu(self.dec_3(d2))
+        x_hat = self.x_bar(d3)
+        return x_hat
 
     def forward(self, x):
-        z = self.encoder(x)
-        x_hat = self.decoder(z)
+        z = self.encode(x)
+        x_hat = self.decode(z)
+        return x_hat, z
 
-        dist = torch.cdist(z, self.centers) ** 2
-        q = (1 + dist / self.alpha) ** (-(self.alpha + 1) / 2)
-        q = q / q.sum(dim=1, keepdim=True)
+class AE(nn.Module):
+    def __init__(self, n_input, n_enc_1=500, n_enc_2=500, n_enc_3=2000, n_z=64):
+        super().__init__()
 
-        return z, x_hat, q
+        self.enc_1 = nn.Linear(n_input, n_enc_1)
+        self.enc_2 = nn.Linear(n_enc_1, n_enc_2)
+        self.enc_3 = nn.Linear(n_enc_2, n_enc_3)
+        self.z_layer = nn.Linear(n_enc_3, n_z)
 
-    def target(self, q):
-        w = q ** 2 / q.sum(0)
-        return w / w.sum(1, keepdim=True)
+        self.dec_1 = nn.Linear(n_z, n_enc_3)
+        self.dec_2 = nn.Linear(n_enc_3, n_enc_2)
+        self.dec_3 = nn.Linear(n_enc_2, n_enc_1)
+        self.x_bar = nn.Linear(n_enc_1, n_input)
 
+    def forward(self, x):
+        h1 = F.relu(self.enc_1(x))
+        h2 = F.relu(self.enc_2(h1))
+        h3 = F.relu(self.enc_3(h2))
+        z = self.z_layer(h3)
+
+        d1 = F.relu(self.dec_1(z))
+        d2 = F.relu(self.dec_2(d1))
+        d3 = F.relu(self.dec_3(d2))
+        x_hat = self.x_bar(d3)
+
+        return x_hat, h1, h2, h3, z
 
 class IDECClusterer(BaseClusterer):
-    def fit_predict(self, embeddings: np.ndarray, k: int) -> np.ndarray:
+
+    @staticmethod
+    def target_distribution(q):
+        weight = (q ** 2) / torch.sum(q, dim=0)
+        return (weight.t() / torch.sum(weight, dim=1)).t()
+
+    def soft_assign(self, z, centers):
+        dist = torch.cdist(z, centers) ** 2
+        q = 1.0 / (1.0 + dist)
+        return q / q.sum(dim=1, keepdim=True)
+
+    def fit_predict(self, embeddings: np.ndarray, k: int, true_labels=None) -> np.ndarray:
+        torch.manual_seed(42)
+        np.random.seed(42)
+
         c = self.cfg.get("idec", {})
-
         device = torch.device(c.get("device", "cpu"))
+
         X = torch.tensor(embeddings, dtype=torch.float32).to(device)
+        p_all = None
 
-        model = IDEC(
-            in_dim=X.shape[1],
-            hidden_dim=c.get("hidden_dim", 256),
-            latent_dim=c.get("latent_dim", 64),
-            n_clusters=k,
-        ).to(device)
+        dataset = TensorDataset(X, torch.arange(len(X)))
+        loader = DataLoader(dataset, batch_size=c.get(
+            "batch_size", 256), shuffle=True)
 
-        opt = torch.optim.Adam(model.parameters(), lr=c.get("lr", 1e-3))
+        model = DECAE(n_input=X.shape[1]).to(device)
 
-        min_delta = float(c.get("min_delta", 1e-4))
-        patience = int(c.get("patience", 20))
+        model.cluster_centers = Parameter(
+            torch.zeros(k, c.get("latent_dim", 64), device=device)
+        )
 
-        best_loss = float("inf")
-        counter = 0
-        best_state = None
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=float(c.get("lr", 1e-3)))
 
-        for _ in range(c.get("pretrain_epochs", 500)):
-            z, x_hat, _ = model(X)
-            loss = F.mse_loss(x_hat, X)
+        for epoch in range(c.get("pretrain_epochs", 50)):
+            for batch, _ in loader:
+                batch = batch.to(device)
+                x_hat, z = model(batch)
+                loss = F.mse_loss(x_hat, batch)
 
-            opt.zero_grad()
-            loss.backward()
-            opt.step()
-
-            curr_loss = loss.item()
-
-            if curr_loss < best_loss - min_delta:
-                best_loss = curr_loss
-                counter = 0
-                best_state = model.state_dict()
-            else:
-                counter += 1
-
-            if counter >= patience:
-                print("Pretraining early stopping")
-                break
-
-        if best_state:
-            model.load_state_dict(best_state)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
         with torch.no_grad():
-            z, _, _ = model(X)
-            z_np = z.cpu().numpy()
+            z = model.encode(X).cpu().numpy()
 
-        km = KMeans(n_clusters=k, n_init=20)
-        model.centers.data = torch.tensor(
-            km.fit(z_np).cluster_centers_,
-            dtype=torch.float32
+        kmeans = KMeans(n_clusters=k, n_init=20)
+        y_pred = kmeans.fit_predict(z)
+
+        model.cluster_centers.data = torch.tensor(
+            kmeans.cluster_centers_, dtype=torch.float32
         ).to(device)
 
-        tol = float(c.get("tol", 1e-3))
-        update_interval = c.get("update_interval", 5)
+        model.train()
+        for epoch in range(c.get("epochs", 100)):
 
-        best_loss = float("inf")
-        counter = 0
-        best_state = None
+            if epoch % c.get("update_interval", 10) == 0:
+                with torch.no_grad():
+                    x_hat, z = model(X)
+                    q_all = self.soft_assign(z, model.cluster_centers)
+                    q_all = torch.clamp(q_all, min=1e-10)
+                    p_all = self.target_distribution(q_all).to(device)
 
-        prev_labels = None
+                    y_pred_new = q_all.argmax(1).cpu().numpy()
+                    delta = np.mean(y_pred != y_pred_new)
+                    y_pred = y_pred_new
 
-        for epoch in range(c.get("epochs", 500)):
-            z, x_hat, q = model(X)
-
-            if epoch % update_interval == 0:
-                curr_labels = q.argmax(dim=1)
-
-                if prev_labels is not None:
-                    delta = (curr_labels != prev_labels).float().mean().item()
-
-                    if delta < tol:
-                        print(
-                            f"Converged at epoch {epoch} (delta={delta:.6f})")
+                    if delta < float(c.get("tol", 1e-3)):
                         break
 
-                prev_labels = curr_labels.clone()
+            for batch, idx in loader:
+                if p_all is None:
+                    continue
+                batch = batch.to(device)
+                idx = idx.to(device)
 
-            p = model.target(q).detach()
+                x_hat, z = model(batch)
 
-            loss_kl = F.kl_div(q.log(), p, reduction="batchmean")
-            loss_rec = F.mse_loss(x_hat, X)
+                dist = torch.cdist(z, model.cluster_centers) ** 2
+                q = 1.0 / (1.0 + dist)
+                q = q / q.sum(dim=1, keepdim=True)
+                q = torch.clamp(q, min=1e-10)
 
-            loss = loss_kl + c.get("lambda_rec", 1.0) * loss_rec
+                p = p_all[idx]
 
-            opt.zero_grad()
-            loss.backward()
-            opt.step()
+                loss = (
+                    F.mse_loss(x_hat, batch)
+                    + c.get("lambda_kl", 1.0) *
+                    F.kl_div(q.log(), p, reduction="batchmean")
+                )
 
-            curr_loss = loss.item()
-
-            if curr_loss < best_loss - min_delta:
-                best_loss = curr_loss
-                counter = 0
-                best_state = model.state_dict()
-            else:
-                counter += 1
-
-            if counter >= patience:
-                print("Loss-based early stopping triggered")
-                break
-
-        if best_state:
-            model.load_state_dict(best_state)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
         with torch.no_grad():
-            _, _, q = model(X)
-            q = q.cpu().numpy()
+            x_hat, z = model(X)
+            q = self.soft_assign(z, model.cluster_centers)
+            return q.argmax(1).cpu().numpy()
 
-        self.probs_ = q
-        return q.argmax(axis=1)
+def cluster_delta(y_prev, y_curr):
+    cm = confusion_matrix(y_prev, y_curr)
+    row_ind, col_ind = linear_sum_assignment(-cm)
+    matched = cm[row_ind, col_ind].sum()
+    return 1 - matched / len(y_prev)
 
-    def predict_proba(self):
-        return getattr(self, "probs_", None)
+def build_sbert_graph(X, topk=10):
+    
+    X = X.astype(np.float32).copy()
+    
+    N, d = X.shape
 
+    faiss.normalize_L2(X)
+
+    index = faiss.IndexFlatIP(d)
+    index.add(X)
+
+    sims, indices = index.search(X, topk + 1)
+
+    rows, cols, vals = [], [], []
+
+    for i in range(N):
+        for j, sim in zip(indices[i][1:], sims[i][1:]):
+
+            if sim > 0.3:
+
+                rows.append(i)
+
+                cols.append(j)
+
+                vals.append(sim)
+
+    # build sparse matrix
+    adj = sp.coo_matrix((vals, (rows, cols)), shape=(N, N))
+
+    # symmetrize
+    adj = adj.maximum(adj.T)
+
+    # normalize
+    deg = np.array(adj.sum(1)).flatten()
+    deg_inv_sqrt = 1.0 / np.sqrt(deg + 1e-8)
+    D_inv_sqrt = sp.diags(deg_inv_sqrt)
+
+    adj = D_inv_sqrt @ adj @ D_inv_sqrt
+
+    return adj
+
+def sparse_to_torch(adj):
+    adj = adj.tocoo()
+    indices = torch.LongTensor([adj.row, adj.col])
+    values = torch.FloatTensor(adj.data)
+    shape = torch.Size(adj.shape)
+    return torch.sparse_coo_tensor(indices, values, shape)
 
 class GCNLayer(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
-        self.linear = nn.Linear(in_dim, out_dim, bias=False)
+        self.linear = nn.Linear(in_dim, out_dim)
 
-    def forward(self, X, A):
-        return F.relu(self.linear(torch.sparse.mm(A, X)))
+    def forward(self, x, adj, active=True):
+        x = self.linear(x)
+        if adj.is_sparse:
+             x = torch.sparse.mm(adj.to(x.device), x)
+        else:
+            x = torch.mm(adj, x)
+        if active:
+            x = F.relu(x)
+        return x
 
-
-class GCN(nn.Module):
-    def __init__(self, in_dim, hidden, out_dim):
+class SDCN(nn.Module):
+    def __init__(self, n_input, n_z, n_clusters):
         super().__init__()
-        self.l1 = GCNLayer(in_dim, hidden)
-        self.l2 = GCNLayer(hidden, out_dim)
 
-    def forward(self, X, A):
-        h = self.l1(X, A)
-        return self.l2(h, A)
+        # AE
+        self.ae = AE(n_input=n_input, n_z=n_z)
 
+        # GCN
+        self.gnn_1 = GCNLayer(n_input, 500)
+        self.gnn_2 = GCNLayer(500, 500)
+        self.gnn_3 = GCNLayer(500, 2000)
+        self.gnn_4 = GCNLayer(2000, n_z)
+        self.gnn_5 = GCNLayer(n_z, n_clusters)
 
-def build_graph(X, k):
-    nbrs = NearestNeighbors(n_neighbors=k + 1).fit(X)
-    _, idx = nbrs.kneighbors(X)
+        # clustering
+        self.cluster_layer = nn.Parameter(torch.Tensor(n_clusters, n_z))
+        nn.init.xavier_normal_(self.cluster_layer.data)
 
-    rows, cols = [], []
-    n = len(X)
+        self.v = 1.0
 
-    for i in range(n):
-        for j in idx[i, 1:]:
-            rows += [i, j]
-            cols += [j, i]
+    def soft_assign(self, z):
+        dist = torch.sum((z.unsqueeze(1) - self.cluster_layer) ** 2, dim=2)
+        q = 1.0 / (1.0 + dist / self.v)
+        q = q ** ((self.v + 1.0) / 2.0)
+        return q / q.sum(dim=1, keepdim=True)
 
-    rows += list(range(n))
-    cols += list(range(n))
+    def forward(self, x, adj):
+        # AE forward
+        x_bar, h1, h2, h3, z = self.ae(x)
 
-    idx = torch.tensor([rows, cols])
-    data = torch.ones(len(rows))
+        sigma = 0.5
 
-    assert idx.shape[0] == 2, "idx must be [2, nnz]"
-    assert idx.shape[1] == data.shape[0], "Mismatch idx/data"
+        # GCN with fusion
+        h = self.gnn_1(x, adj)
+        h = self.gnn_2((1 - sigma) * h + sigma * h1, adj)
+        h = self.gnn_3((1 - sigma) * h + sigma * h2, adj)
+        h = self.gnn_4((1 - sigma) * h + sigma * h3, adj)
+        h = self.gnn_5((1 - sigma) * h + sigma * z, adj, active=False)
 
-    assert idx.min() >= 0, "Negative indices found"
-    assert idx.max() < n, f"Index out of bounds: max={idx.max()}, n={n}"
+        predict = F.log_softmax(h, dim=1)
 
-    A = torch.sparse_coo_tensor(idx, data, (n, n)).coalesce()
+        # AE clustering
+        q = self.soft_assign(z)
 
-    deg = torch.sparse.sum(A, dim=1).to_dense().clamp(min=1)
-    d = deg.pow(-0.5)
+        return x_bar, q, predict, z
 
-    A = A.to_dense()
-    A = d.unsqueeze(1) * A * d.unsqueeze(0)
+class SDCNClusterer(BaseClusterer):
 
-    return A.to_sparse()
+    def fit_predict(self, embeddings: np.ndarray, k: int, true_labels=None) -> np.ndarray:
 
+        torch.manual_seed(42)
 
-class GCNClusterer(BaseClusterer):
-    def fit_predict(self, embeddings: np.ndarray, k: int) -> np.ndarray:
-        c = self.cfg.get("gcn", {})
+        np.random.seed(42)
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        cfg = self.cfg.get("sdcn", {})
+        device = torch.device(cfg.get("device", "cpu"))
 
-        X = torch.tensor(embeddings, dtype=torch.float32).to(device)
-        A = build_graph(embeddings, c.get("knn_k", 10)).to(device)
+        X = torch.tensor(embeddings, dtype=torch.float32, device=device)
 
-        model = GCN(
-            X.shape[1],
-            c.get("hidden_dim", 128),
-            c.get("out_dim", 64),
+        adj = build_sbert_graph(embeddings, cfg.get("knn_k", 5)).to(device)
+
+        adj = sparse_to_torch(adj)
+
+        adj = adj.coalesce()
+
+        if adj._values().numel() > 0 and torch.isnan(adj._values()).any():
+
+            raise ValueError("Adjacency matrix contains NaNs")
+
+        model = SDCN(
+            n_input=X.shape[1],
+            n_z=cfg.get("latent_dim", 64),
+            n_clusters=k
         ).to(device)
 
-        opt = torch.optim.Adam(model.parameters(), lr=c.get("lr", 1e-3))
-
-        with torch.no_grad():
-            target = torch.sparse.mm(A, X)
-
-        best_val_loss = float('inf')
-        patience = 20
-        counter = 0
-
-        train_idx, val_idx = train_test_split(
-            torch.arange(X.shape[0]), test_size=0.2, random_state=42
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=float(cfg.get("lr", 1e-3))
         )
 
-        for epoch in range(500):
-            model.train()
+        for epoch in range(cfg.get("pretrain_epochs", 50)):
+            x_hat, _ = model.ae(X)
+            loss = F.mse_loss(x_hat, X)
 
-            Z = model(X, A)
-            loss = F.mse_loss(Z[train_idx], target[train_idx][:, :Z.shape[1]])
-
-            opt.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
-            opt.step()
-
-            model.eval()
-            with torch.no_grad():
-                Z = model(X, A)
-                val_loss = F.mse_loss(
-                    Z[val_idx], target[val_idx][:, :Z.shape[1]])
-
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                counter = 0
-                best_state = model.state_dict()
-            else:
-                counter += 1
-
-            if counter >= patience:
-                print("Early stopping triggered")
-                break
-
-        model.load_state_dict(best_state)
+            optimizer.step()
 
         with torch.no_grad():
-            Z = model(X, A).cpu().numpy()
+            _, z = model.ae(X)
 
-        Z = normalize(Z)
+        kmeans = KMeans(n_clusters=k, n_init=20, random_state=42)
+        y_pred = kmeans.fit_predict(z.cpu().numpy())
+        y_pred_last = y_pred
 
-        return KMeansClusterer(self.cfg).fit_predict(Z, k)
+        model.cluster_layer.data = torch.tensor(
+            kmeans.cluster_centers_,
+            dtype=torch.float32,
+            device=device
+        )
 
+        for epoch in range(cfg.get("epochs", 200)):
 
-_REGISTRY = {
+            # Forward
+            x_bar, q, pred, _ = model(X, adj)
+
+            # Stabilize
+            q = torch.clamp(q, min=1e-10)
+            pred = torch.clamp(pred, min=1e-10)
+
+            # Target distribution
+            p = target_distribution(q).detach()
+
+            # Losses
+            kl_loss = F.kl_div(q.log(), p, reduction='batchmean')
+            ce_loss = F.kl_div(pred, p, reduction='batchmean')
+            re_loss = F.mse_loss(x_bar, X)
+
+            loss = (
+                cfg.get("alpha", 0.1) * kl_loss +
+                cfg.get("beta", 0.01) * ce_loss +
+                re_loss
+            )
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            if epoch % cfg.get("update_interval", 10) == 0:
+                with torch.no_grad():
+                    y_pred = q.argmax(1).cpu().numpy()
+                    delta = cluster_delta(y_pred_last, y_pred)
+                    y_pred_last = y_pred
+
+                if delta < cfg.get("tol", 1e-3):
+                    print(f"[SDCN] Converged at epoch {epoch}")
+                    break
+
+            # Logging
+            if epoch % 10 == 0:
+                print(
+                    f"[SDCN] Epoch {epoch} | "
+                    f"Loss={loss.item():.4f} | "
+                    f"KL={kl_loss.item():.4f} | "
+                    f"CE={ce_loss.item():.4f} | "
+                    f"RE={re_loss.item():.4f}"
+                )
+
+        with torch.no_grad():
+            _, q, _, _ = model(X, adj)
+            labels = q.argmax(1).cpu().numpy()
+
+        return labels
+
+registry = {
     "kmeans": KMeansClusterer,
-    "ae": AEClusterer,
-    "dec": IDECClusterer,
-    "gcn": GCNClusterer,
+    "idec": IDECClusterer,
+    "sdcn": SDCNClusterer
 }
+
 
 def get_clusterer(cfg: dict) -> BaseClusterer:
     name = cfg["name"].lower()
-    if name not in _REGISTRY:
+    if name not in registry:
         raise ValueError(f"Unknown clusterer: {name}")
-    return _REGISTRY[name](cfg)
+    return registry[name](cfg)

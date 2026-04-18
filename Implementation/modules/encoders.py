@@ -1,16 +1,10 @@
 import numpy as np
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict
-from collections import defaultdict
-
+from typing import List, Optional
+from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import normalize
-
-from gensim.models import Word2Vec, KeyedVectors
-from gensim.models.doc2vec import Doc2Vec, TaggedDocument
-
-from nltk.corpus import wordnet as wn
 
 
 class BaseEncoder(ABC):
@@ -19,7 +13,7 @@ class BaseEncoder(ABC):
 
     @abstractmethod
     def fit_transform(
-        self,
+        self,device,
         cleaned_texts: Optional[List[str]] = None,
         tokenized_texts: Optional[List[List[str]]] = None,
     ) -> np.ndarray:
@@ -32,13 +26,13 @@ class BaseEncoder(ABC):
 
 class TFIDFEncoder(BaseEncoder):
 
-    def fit_transform(self, cleaned_texts=None, **kwargs):
+    def fit_transform(self,device, cleaned_texts=None, **kwargs):
         c = self.cfg.get("tfidf", {})
 
         vectorizer = TfidfVectorizer(
-            max_features=c.get("max_features", 10000),
-            ngram_range=tuple(c.get("ngram_range", [1, 2])),
-            sublinear_tf=c.get("sublinear_tf", True),
+            max_features=c.get("max_features"),
+            ngram_range=tuple(c.get("ngram_range")),
+            sublinear_tf=c.get("sublinear_tf"),
         )
 
         X = vectorizer.fit_transform(cleaned_texts)
@@ -53,60 +47,28 @@ class TFIDFEncoder(BaseEncoder):
 
 class SBERTEncoder(BaseEncoder):
 
-    def fit_transform(self, cleaned_texts=None, **kwargs):
-        from sentence_transformers import SentenceTransformer
+    def fit_transform(self, device, cleaned_texts=None, **kwargs):
+       
 
         c = self.cfg.get("sbert", {})
-        model = SentenceTransformer(c.get("model_name", "all-MiniLM-L6-v2"),device='mps')
+        model = SentenceTransformer(
+            c.get("model_name"), device=device)
 
         return model.encode(
             cleaned_texts,
-            batch_size=c.get("batch_size", 64),
+            batch_size=c.get("batch_size"),
             convert_to_numpy=True,
             normalize_embeddings=True,
         ).astype(np.float32)
 
 
-class Doc2VecEncoder(BaseEncoder):
-
-    def fit_transform(self, cleaned_texts=None, tokenized_texts=None):
-        c = self.cfg.get("doc2vec", {})
-
-        tagged = [
-            TaggedDocument(words=toks, tags=[str(i)])
-            for i, toks in enumerate(tokenized_texts)
-        ]
-
-        model = Doc2Vec(
-            vector_size=c.get("vector_size", 300),
-            window=c.get("window", 5),
-            min_count=c.get("min_count", 2),
-            dm=c.get("dm", 1),
-            workers=1,
-            seed=42,
-        )
-
-        model.build_vocab(tagged)
-
-        model.train(
-            tagged,
-            total_examples=model.corpus_count,
-            epochs=c.get("epochs", 40),
-        )
-
-        X = np.array([model.dv[str(i)] for i in range(len(tagged))])
-        return normalize(X.astype(np.float32))
-
-
-_REGISTRY = {
-    "tfidf": TFIDFEncoder,
-    "doc2vec": Doc2VecEncoder,
-    "sbert": SBERTEncoder
+registry = {
+    "tfidf": TFIDFEncoder, "sbert": SBERTEncoder
 }
 
 
 def get_encoder(cfg: dict) -> BaseEncoder:
     name = cfg["name"].lower()
-    if name not in _REGISTRY:
+    if name not in registry:
         raise ValueError(f"Unknown encoder: {name}")
-    return _REGISTRY[name](cfg)
+    return registry[name](cfg)
