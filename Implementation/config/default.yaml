@@ -1,7 +1,7 @@
 experiment:
   name: "baseline_known_k"
   seed: 42
-  n_runs: 1
+  n_runs: 3
   output_dir: "results/"
 
 dataset:
@@ -37,6 +37,7 @@ encoder:
 
 
 reduction:
+  use_pca: true
   method: "pca"
   n_components: 0.95
 
@@ -53,33 +54,34 @@ clustering:
 
   idec:
     hidden_dim: 256
-    latent_dim: 64
-    lr: 0.001
+    latent_dim: 128
+    lr: 1e-3
 
     batch_size: 256
 
-    pretrain_epochs: 50
-    epochs: 100
+    pretrain_epochs: 100
+    epochs: 200
 
     update_interval: 10
     lambda_kl: 1.0
     tol: 1e-3
 
-    device: "mps"
+    device: "cuda"
 
   sdcn:
-    lr: 1e-3
-    epochs: 100
-    pretrain_epochs: 50
+    lr: 3e-3
+    epochs: 200
+    pretrain_epochs: 100
 
-    latent_dim: 64
-    knn_k: 5
+    latent_dim: 128
+    knn_k: 15
 
-    alpha: 0.1   # KL weight
-
+    alpha: 1.0
+    beta: 0.3
     update_interval: 10
+    tol: 1e-3
 
-    device: "mps"
+    device: "cuda"
 
 evaluation:
   mode: "label"

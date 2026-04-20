@@ -36,6 +36,7 @@ class KMeansClusterer(BaseClusterer):
             max_iter=c.get("max_iter", 300),
             random_state=42,
         )
+        
         return model.fit_predict(embeddings)
 
 class DECAE(nn.Module):
@@ -251,8 +252,10 @@ def build_sbert_graph(X, topk=10):
 
 def sparse_to_torch(adj):
     adj = adj.tocoo()
-    indices = torch.LongTensor([adj.row, adj.col])
-    values = torch.FloatTensor(adj.data)
+    indices = torch.from_numpy(
+        np.vstack((adj.row, adj.col))
+    ).long()
+    values = torch.from_numpy(adj.data).float()
     shape = torch.Size(adj.shape)
     return torch.sparse_coo_tensor(indices, values, shape)
 
@@ -260,13 +263,14 @@ class GCNLayer(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.linear = nn.Linear(in_dim, out_dim)
-
     def forward(self, x, adj, active=True):
         x = self.linear(x)
+    
         if adj.is_sparse:
-             x = torch.sparse.mm(adj.to(x.device), x)
+            x = torch.sparse.mm(adj, x)
         else:
             x = torch.mm(adj, x)
+    
         if active:
             x = F.relu(x)
         return x
@@ -321,25 +325,26 @@ class SDCNClusterer(BaseClusterer):
 
     def fit_predict(self, embeddings: np.ndarray, k: int, true_labels=None) -> np.ndarray:
 
+        min_epochs = 20
+
         torch.manual_seed(42)
 
         np.random.seed(42)
 
         cfg = self.cfg.get("sdcn", {})
 
-        device = torch.device(cfg.get("device", "cpu"))
+        device = torch.device(cfg.get("device", "cuda"))
 
-        embeddings_pca = PCA(n_components=0.95)
-
-        X_np = embeddings_pca.fit_transform(embeddings)
-
+        if cfg.get("use_pca", False):
+            X_np = PCA(n_components=0.95).fit_transform(embeddings)
+        else:
+            X_np = embeddings
+        
+        adj = build_sbert_graph(X_np, cfg.get("knn_k", 5))
+        
         X = torch.tensor(X_np, dtype=torch.float32, device=device)
 
-        adj = build_sbert_graph(X.cpu().numpy(), cfg.get("knn_k", 5))
-
-        adj = sparse_to_torch(adj)
-
-        adj = adj.coalesce()
+        adj = sparse_to_torch(adj).coalesce().to(device)
 
         if adj._values().numel() > 0 and torch.isnan(adj._values()).any():
 
@@ -356,7 +361,7 @@ class SDCNClusterer(BaseClusterer):
         )
 
         for epoch in range(cfg.get("pretrain_epochs", 50)):
-            x_hat, _ = model.ae(X)
+            x_hat, *_ = model.ae(X)
             loss = F.mse_loss(x_hat, X)
 
             optimizer_ae.zero_grad()
@@ -364,20 +369,15 @@ class SDCNClusterer(BaseClusterer):
             optimizer_ae.step()
 
         with torch.no_grad():
-            _, z = model.ae(X)
+            _, _, _, _, z = model.ae(X)
 
         kmeans = KMeans(n_clusters=k, n_init=20, random_state=42)
 
-        z_np = z.cpu().numpy()
-        z_np = z_np / np.linalg.norm(z_np, axis=1, keepdims=True)
+        z_np = z.detach().cpu().numpy()
         y_pred = kmeans.fit_predict(z_np)
         y_pred_last = y_pred
 
-        model.cluster_layer.data = torch.tensor(
-            kmeans.cluster_centers_,
-            dtype=torch.float32,
-            device=device
-        )
+        model.cluster_layer.data = torch.tensor( kmeans.cluster_centers_, dtype=torch.float32, device=device )
 
         optimizer = torch.optim.Adam(
             model.parameters(), lr=float(cfg.get("lr", 1e-3))
@@ -400,21 +400,23 @@ class SDCNClusterer(BaseClusterer):
             re_loss = F.mse_loss(x_bar, X)
 
             loss = (
-                cfg.get("alpha", 0.1) * kl_loss +
-                cfg.get("beta", 0.01) * ce_loss +
+                cfg.get("alpha") * kl_loss +
+                cfg.get("beta") * ce_loss +
                 re_loss
             )
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            if epoch % cfg.get("update_interval", 10) == 0:
+            
+
+            if epoch > min_epochs and epoch % cfg.get("update_interval", 10) == 0:
                 with torch.no_grad():
                     y_pred = q.argmax(1).cpu().numpy()
                     delta = cluster_delta(y_pred_last, y_pred)
                     y_pred_last = y_pred
-
-                if delta < cfg.get("tol", 1e-3):
+            
+                if delta < float(cfg.get("tol", 1e-3)):
                     print(f"[SDCN] Converged at epoch {epoch}")
                     break
 
