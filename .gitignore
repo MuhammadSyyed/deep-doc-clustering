@@ -5,4 +5,4 @@ __MACOSX/
 artifacts/
 others/
 datasets/
-thenv/
+*env/

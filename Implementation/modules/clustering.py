@@ -28,6 +28,10 @@ class BaseClusterer(ABC):
         pass
 
 class KMeansClusterer(BaseClusterer):
+    def __init__(self, cfg: dict):
+        super().__init__(cfg)
+        self.training_history = []
+
     def fit_predict(self, embeddings: np.ndarray, k: int, true_labels=None) -> np.ndarray:
         c = self.cfg.get("kmeans", {})
         model = KMeans(
@@ -36,8 +40,13 @@ class KMeansClusterer(BaseClusterer):
             max_iter=c.get("max_iter", 300),
             random_state=42,
         )
-        
-        return model.fit_predict(embeddings)
+        labels = model.fit_predict(embeddings)
+        self.training_history = [{
+            "epoch": 0,
+            "inertia": float(model.inertia_),
+            "n_iter": int(model.n_iter_),
+        }]
+        return labels
 
 class DECAE(nn.Module):
     def __init__(self, n_input, n_enc_1=256, n_enc_2=128, n_enc_3=64, n_z=32):
@@ -75,6 +84,9 @@ class DECAE(nn.Module):
         return x_hat, z
 
 class IDECClusterer(BaseClusterer):
+    def __init__(self, cfg: dict):
+        super().__init__(cfg)
+        self.training_history = []
 
     @staticmethod
     def target_distribution(q):
@@ -89,6 +101,7 @@ class IDECClusterer(BaseClusterer):
     def fit_predict(self, embeddings: np.ndarray, k: int, true_labels=None) -> np.ndarray:
         torch.manual_seed(42)
         np.random.seed(42)
+        self.training_history = []
 
         c = self.cfg.get("idec", {})
         device = torch.device(c.get("device", "cpu"))
@@ -110,6 +123,8 @@ class IDECClusterer(BaseClusterer):
             model.parameters(), lr=float(c.get("lr", 1e-3)))
 
         for epoch in range(c.get("pretrain_epochs", 50)):
+            epoch_pretrain_loss = 0.0
+            batch_count = 0
             for batch, _ in loader:
                 batch = batch.to(device)
                 x_hat, z = model(batch)
@@ -118,6 +133,15 @@ class IDECClusterer(BaseClusterer):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+                epoch_pretrain_loss += loss.item()
+                batch_count += 1
+
+            if batch_count > 0:
+                self.training_history.append({
+                    "stage": "pretrain",
+                    "epoch": int(epoch),
+                    "reconstruction_loss": float(epoch_pretrain_loss / batch_count),
+                })
 
         with torch.no_grad():
             z = model.encode(X).cpu().numpy()
@@ -131,6 +155,11 @@ class IDECClusterer(BaseClusterer):
 
         model.train()
         for epoch in range(c.get("epochs", 100)):
+            epoch_total_loss = 0.0
+            epoch_recon_loss = 0.0
+            epoch_kl_loss = 0.0
+            batch_count = 0
+            delta_val = None
 
             if epoch % c.get("update_interval", 10) == 0:
                 with torch.no_grad():
@@ -141,9 +170,19 @@ class IDECClusterer(BaseClusterer):
 
                     y_pred_new = q_all.argmax(1).cpu().numpy()
                     delta = np.mean(y_pred != y_pred_new)
+                    delta_val = float(delta)
                     y_pred = y_pred_new
 
                     if delta < float(c.get("tol", 1e-3)):
+                        self.training_history.append({
+                            "stage": "cluster",
+                            "epoch": int(epoch),
+                            "total_loss": None,
+                            "reconstruction_loss": None,
+                            "kl_loss": None,
+                            "delta": delta_val,
+                            "converged": True,
+                        })
                         break
 
             for batch, idx in loader:
@@ -161,15 +200,27 @@ class IDECClusterer(BaseClusterer):
 
                 p = p_all[idx]
 
-                loss = (
-                    F.mse_loss(x_hat, batch)
-                    + c.get("lambda_kl", 1.0) *
-                    F.kl_div(q.log(), p, reduction="batchmean")
-                )
+                recon_loss = F.mse_loss(x_hat, batch)
+                kl_loss = F.kl_div(q.log(), p, reduction="batchmean")
+                total_loss = recon_loss + c.get("lambda_kl", 1.0) * kl_loss
 
                 optimizer.zero_grad()
-                loss.backward()
+                total_loss.backward()
                 optimizer.step()
+                epoch_total_loss += total_loss.item()
+                epoch_recon_loss += recon_loss.item()
+                epoch_kl_loss += kl_loss.item()
+                batch_count += 1
+
+            if batch_count > 0:
+                self.training_history.append({
+                    "stage": "cluster",
+                    "epoch": int(epoch),
+                    "total_loss": float(epoch_total_loss / batch_count),
+                    "reconstruction_loss": float(epoch_recon_loss / batch_count),
+                    "kl_loss": float(epoch_kl_loss / batch_count),
+                    "delta": delta_val,
+                })
 
         with torch.no_grad():
             x_hat, z = model(X)
@@ -322,6 +373,9 @@ class SDCN(nn.Module):
         return x_bar, q, predict, z
 
 class SDCNClusterer(BaseClusterer):
+    def __init__(self, cfg: dict):
+        super().__init__(cfg)
+        self.training_history = []
 
     def fit_predict(self, embeddings: np.ndarray, k: int, true_labels=None) -> np.ndarray:
 
@@ -330,6 +384,7 @@ class SDCNClusterer(BaseClusterer):
         torch.manual_seed(42)
 
         np.random.seed(42)
+        self.training_history = []
 
         cfg = self.cfg.get("sdcn", {})
 
@@ -367,6 +422,11 @@ class SDCNClusterer(BaseClusterer):
             optimizer_ae.zero_grad()
             loss.backward()
             optimizer_ae.step()
+            self.training_history.append({
+                "stage": "pretrain",
+                "epoch": int(epoch),
+                "reconstruction_loss": float(loss.item()),
+            })
 
         with torch.no_grad():
             _, _, _, _, z = model.ae(X)
@@ -418,6 +478,16 @@ class SDCNClusterer(BaseClusterer):
             
                 if delta < float(cfg.get("tol", 1e-3)):
                     print(f"[SDCN] Converged at epoch {epoch}")
+                    self.training_history.append({
+                        "stage": "cluster",
+                        "epoch": int(epoch),
+                        "loss": float(loss.item()),
+                        "kl_loss": float(kl_loss.item()),
+                        "ce_loss": float(ce_loss.item()),
+                        "reconstruction_loss": float(re_loss.item()),
+                        "delta": float(delta),
+                        "converged": True,
+                    })
                     break
 
             # Logging
@@ -429,6 +499,14 @@ class SDCNClusterer(BaseClusterer):
                     f"CE={ce_loss.item():.4f} | "
                     f"RE={re_loss.item():.4f}"
                 )
+            self.training_history.append({
+                "stage": "cluster",
+                "epoch": int(epoch),
+                "loss": float(loss.item()),
+                "kl_loss": float(kl_loss.item()),
+                "ce_loss": float(ce_loss.item()),
+                "reconstruction_loss": float(re_loss.item()),
+            })
 
         with torch.no_grad():
             _, q, _, _ = model(X, adj)
