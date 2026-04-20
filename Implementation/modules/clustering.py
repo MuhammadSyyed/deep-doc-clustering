@@ -8,6 +8,7 @@ import faiss
 import scipy.sparse as sp
 import torch
 import torch.nn.functional as F
+from sklearn.decomposition import PCA
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
 import torch.nn as nn
@@ -38,7 +39,7 @@ class KMeansClusterer(BaseClusterer):
         return model.fit_predict(embeddings)
 
 class DECAE(nn.Module):
-    def __init__(self, n_input, n_enc_1=500, n_enc_2=500, n_enc_3=2000, n_z=64):
+    def __init__(self, n_input, n_enc_1=256, n_enc_2=128, n_enc_3=64, n_z=32):
         super().__init__()
 
         # Encoder
@@ -71,33 +72,6 @@ class DECAE(nn.Module):
         z = self.encode(x)
         x_hat = self.decode(z)
         return x_hat, z
-
-class AE(nn.Module):
-    def __init__(self, n_input, n_enc_1=500, n_enc_2=500, n_enc_3=2000, n_z=64):
-        super().__init__()
-
-        self.enc_1 = nn.Linear(n_input, n_enc_1)
-        self.enc_2 = nn.Linear(n_enc_1, n_enc_2)
-        self.enc_3 = nn.Linear(n_enc_2, n_enc_3)
-        self.z_layer = nn.Linear(n_enc_3, n_z)
-
-        self.dec_1 = nn.Linear(n_z, n_enc_3)
-        self.dec_2 = nn.Linear(n_enc_3, n_enc_2)
-        self.dec_3 = nn.Linear(n_enc_2, n_enc_1)
-        self.x_bar = nn.Linear(n_enc_1, n_input)
-
-    def forward(self, x):
-        h1 = F.relu(self.enc_1(x))
-        h2 = F.relu(self.enc_2(h1))
-        h3 = F.relu(self.enc_3(h2))
-        z = self.z_layer(h3)
-
-        d1 = F.relu(self.dec_1(z))
-        d2 = F.relu(self.dec_2(d1))
-        d3 = F.relu(self.dec_3(d2))
-        x_hat = self.x_bar(d3)
-
-        return x_hat, h1, h2, h3, z
 
 class IDECClusterer(BaseClusterer):
 
@@ -201,6 +175,33 @@ class IDECClusterer(BaseClusterer):
             q = self.soft_assign(z, model.cluster_centers)
             return q.argmax(1).cpu().numpy()
 
+class AE(nn.Module):
+    def __init__(self, n_input, n_enc_1=256, n_enc_2=128, n_enc_3=64, n_z=32):
+        super().__init__()
+
+        self.enc_1 = nn.Linear(n_input, n_enc_1)
+        self.enc_2 = nn.Linear(n_enc_1, n_enc_2)
+        self.enc_3 = nn.Linear(n_enc_2, n_enc_3)
+        self.z_layer = nn.Linear(n_enc_3, n_z)
+
+        self.dec_1 = nn.Linear(n_z, n_enc_3)
+        self.dec_2 = nn.Linear(n_enc_3, n_enc_2)
+        self.dec_3 = nn.Linear(n_enc_2, n_enc_1)
+        self.x_bar = nn.Linear(n_enc_1, n_input)
+
+    def forward(self, x):
+        h1 = F.relu(self.enc_1(x))
+        h2 = F.relu(self.enc_2(h1))
+        h3 = F.relu(self.enc_3(h2))
+        z = self.z_layer(h3)
+
+        d1 = F.relu(self.dec_1(z))
+        d2 = F.relu(self.dec_2(d1))
+        d3 = F.relu(self.dec_3(d2))
+        x_hat = self.x_bar(d3)
+
+        return x_hat, h1, h2, h3, z
+
 def cluster_delta(y_prev, y_curr):
     cm = confusion_matrix(y_prev, y_curr)
     row_ind, col_ind = linear_sum_assignment(-cm)
@@ -224,14 +225,9 @@ def build_sbert_graph(X, topk=10):
 
     for i in range(N):
         for j, sim in zip(indices[i][1:], sims[i][1:]):
-
-            if sim > 0.3:
-
-                rows.append(i)
-
-                cols.append(j)
-
-                vals.append(sim)
+            rows.append(i)
+            cols.append(j)
+            vals.append(sim)
 
     # build sparse matrix
     adj = sp.coo_matrix((vals, (rows, cols)), shape=(N, N))
@@ -239,12 +235,17 @@ def build_sbert_graph(X, topk=10):
     # symmetrize
     adj = adj.maximum(adj.T)
 
+    adj = adj + sp.eye(adj.shape[0])
+
     # normalize
     deg = np.array(adj.sum(1)).flatten()
     deg_inv_sqrt = 1.0 / np.sqrt(deg + 1e-8)
     D_inv_sqrt = sp.diags(deg_inv_sqrt)
 
     adj = D_inv_sqrt @ adj @ D_inv_sqrt
+
+    adj = adj.tocsr()
+    adj.eliminate_zeros()
 
     return adj
 
@@ -278,10 +279,10 @@ class SDCN(nn.Module):
         self.ae = AE(n_input=n_input, n_z=n_z)
 
         # GCN
-        self.gnn_1 = GCNLayer(n_input, 500)
-        self.gnn_2 = GCNLayer(500, 500)
-        self.gnn_3 = GCNLayer(500, 2000)
-        self.gnn_4 = GCNLayer(2000, n_z)
+        self.gnn_1 = GCNLayer(n_input, 256)
+        self.gnn_2 = GCNLayer(256, 128)
+        self.gnn_3 = GCNLayer(128, 64)
+        self.gnn_4 = GCNLayer(64, n_z)
         self.gnn_5 = GCNLayer(n_z, n_clusters)
 
         # clustering
@@ -325,11 +326,16 @@ class SDCNClusterer(BaseClusterer):
         np.random.seed(42)
 
         cfg = self.cfg.get("sdcn", {})
+
         device = torch.device(cfg.get("device", "cpu"))
 
-        X = torch.tensor(embeddings, dtype=torch.float32, device=device)
+        embeddings_pca = PCA(n_components=0.95)
 
-        adj = build_sbert_graph(embeddings, cfg.get("knn_k", 5)).to(device)
+        X_np = embeddings_pca.fit_transform(embeddings)
+
+        X = torch.tensor(X_np, dtype=torch.float32, device=device)
+
+        adj = build_sbert_graph(X.cpu().numpy(), cfg.get("knn_k", 5))
 
         adj = sparse_to_torch(adj)
 
@@ -345,7 +351,7 @@ class SDCNClusterer(BaseClusterer):
             n_clusters=k
         ).to(device)
 
-        optimizer = torch.optim.Adam(
+        optimizer_ae = torch.optim.Adam(
             model.parameters(), lr=float(cfg.get("lr", 1e-3))
         )
 
@@ -353,21 +359,28 @@ class SDCNClusterer(BaseClusterer):
             x_hat, _ = model.ae(X)
             loss = F.mse_loss(x_hat, X)
 
-            optimizer.zero_grad()
+            optimizer_ae.zero_grad()
             loss.backward()
-            optimizer.step()
+            optimizer_ae.step()
 
         with torch.no_grad():
             _, z = model.ae(X)
 
         kmeans = KMeans(n_clusters=k, n_init=20, random_state=42)
-        y_pred = kmeans.fit_predict(z.cpu().numpy())
+
+        z_np = z.cpu().numpy()
+        z_np = z_np / np.linalg.norm(z_np, axis=1, keepdims=True)
+        y_pred = kmeans.fit_predict(z_np)
         y_pred_last = y_pred
 
         model.cluster_layer.data = torch.tensor(
             kmeans.cluster_centers_,
             dtype=torch.float32,
             device=device
+        )
+
+        optimizer = torch.optim.Adam(
+            model.parameters(), lr=float(cfg.get("lr", 1e-3))
         )
 
         for epoch in range(cfg.get("epochs", 200)):
@@ -377,14 +390,13 @@ class SDCNClusterer(BaseClusterer):
 
             # Stabilize
             q = torch.clamp(q, min=1e-10)
-            pred = torch.clamp(pred, min=1e-10)
 
             # Target distribution
             p = target_distribution(q).detach()
 
             # Losses
             kl_loss = F.kl_div(q.log(), p, reduction='batchmean')
-            ce_loss = F.kl_div(pred, p, reduction='batchmean')
+            ce_loss = F.kl_div(pred, p, reduction='batchmean', log_target=False)
             re_loss = F.mse_loss(x_bar, X)
 
             loss = (
@@ -392,7 +404,6 @@ class SDCNClusterer(BaseClusterer):
                 cfg.get("beta", 0.01) * ce_loss +
                 re_loss
             )
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
