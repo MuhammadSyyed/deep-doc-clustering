@@ -207,6 +207,8 @@ def render_results_tab() -> None:
         plot_metrics = [c for c in metric_cols if df_plot[c].notna().any()]
         if len(plot_metrics) > 1:
             heat = df_plot.set_index(x_cat)[plot_metrics]
+            if heat.index.has_duplicates:
+                heat = heat.groupby(level=0, sort=False).mean(numeric_only=True)
             heat = heat.dropna(axis=1, how="all")
             if not heat.empty:
                 heat_disp = heat.T

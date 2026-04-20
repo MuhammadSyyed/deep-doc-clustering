@@ -388,7 +388,7 @@ class SDCNClusterer(BaseClusterer):
 
         cfg = self.cfg.get("sdcn", {})
 
-        device = torch.device(cfg.get("device", "cuda"))
+        device = torch.device(cfg.get("device"))
 
         if cfg.get("use_pca", False):
             X_np = PCA(n_components=0.95).fit_transform(embeddings)
