@@ -470,6 +470,7 @@ class SDCNClusterer(BaseClusterer):
 
             
 
+            converged_this_epoch = False
             if epoch > min_epochs and epoch % cfg.get("update_interval", 10) == 0:
                 with torch.no_grad():
                     y_pred = q.argmax(1).cpu().numpy()
@@ -488,6 +489,7 @@ class SDCNClusterer(BaseClusterer):
                         "delta": float(delta),
                         "converged": True,
                     })
+                    converged_this_epoch = True
                     break
 
             # Logging
@@ -499,14 +501,15 @@ class SDCNClusterer(BaseClusterer):
                     f"CE={ce_loss.item():.4f} | "
                     f"RE={re_loss.item():.4f}"
                 )
-            self.training_history.append({
-                "stage": "cluster",
-                "epoch": int(epoch),
-                "loss": float(loss.item()),
-                "kl_loss": float(kl_loss.item()),
-                "ce_loss": float(ce_loss.item()),
-                "reconstruction_loss": float(re_loss.item()),
-            })
+            if not converged_this_epoch:
+                self.training_history.append({
+                    "stage": "cluster",
+                    "epoch": int(epoch),
+                    "loss": float(loss.item()),
+                    "kl_loss": float(kl_loss.item()),
+                    "ce_loss": float(ce_loss.item()),
+                    "reconstruction_loss": float(re_loss.item()),
+                })
 
         with torch.no_grad():
             _, q, _, _ = model(X, adj)

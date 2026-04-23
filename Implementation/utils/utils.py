@@ -9,7 +9,7 @@ from sklearn.metrics import pairwise_distances as pair
 from sklearn.preprocessing import normalize
 
 cols = ['experiment_name', 'dataset', 'encoder', 'clusterer', 'n_docs', 'k_used', 'k_true', 'embedding_time', 'clustering_time_mean', 'clustering_time_std', 'total_time', 'acc_mean',
-        'acc_std', 'nmi_mean', 'nmi_std', 'ari_mean', 'ari_std', 'purity_mean', 'purity_std', 'silhouette_mean', 'silhouette_std', 'davies_bouldin_mean', 'davies_bouldin_std', 'collapse_mean']
+        'acc_std', 'nmi_mean', 'nmi_std', 'ari_mean', 'ari_std', 'purity_mean', 'purity_std', 'silhouette_mean', 'silhouette_std', 'davies_bouldin_mean', 'davies_bouldin_std', 'collapse_mean', 'epoch_metrics_file']
 
 
 def save_results(result: dict, filename: str = "results.csv"):
