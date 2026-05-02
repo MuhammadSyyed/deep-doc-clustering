@@ -53,28 +53,28 @@ clustering:
     random_state: 42
 
   idec:
-    hidden_dim: 256
-    latent_dim: 128
+    hidden_dim: 128
+    latent_dim: 64
     lr: 1e-3
 
-    batch_size: 256
+    batch_size: 64
 
-    pretrain_epochs: 100
-    epochs: 200
+    pretrain_epochs: 200
+    epochs: 250
 
     update_interval: 10
-    lambda_kl: 1.0
+    lambda_kl: 0.4
     tol: 1e-3
 
     device: "cuda"
 
   sdcn:
-    lr: 3e-3
+    lr: 1e-4
     epochs: 200
-    pretrain_epochs: 100
+    pretrain_epochs: 300
 
     latent_dim: 128
-    knn_k: 15
+    knn_k: 10
 
     alpha: 1.0
     beta: 0.3
