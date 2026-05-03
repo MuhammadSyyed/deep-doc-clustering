@@ -59,10 +59,10 @@ clustering:
 
     batch_size: 64
 
-    pretrain_epochs: 200
-    epochs: 250
+    pretrain_epochs: 150
+    epochs: 100
 
-    update_interval: 10
+    update_interval: 5
     lambda_kl: 0.4
     tol: 1e-3
 
