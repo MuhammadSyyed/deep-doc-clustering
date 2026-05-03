@@ -18,13 +18,9 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
-for _pkg in ("punkt", "stopwords", "wordnet", "averaged_perceptron_tagger", "omw-1.4", "punkt_tab"):
-    nltk.download(_pkg, quiet=True)
-
-
 root = Path.cwd()
 if not (root / "modules").is_dir():
-    REPO_ROOT = root.parent
+    REPO_ROOT =  root.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 
@@ -78,6 +74,20 @@ class SBERTEncoder(BaseEncoder):
             normalize_embeddings=True,
         ).astype(np.float32)
 
+def ensure_nltk():
+    resources = {
+        "punkt": "tokenizers/punkt",
+        "stopwords": "corpora/stopwords",
+        "wordnet": "corpora/wordnet",
+        "averaged_perceptron_tagger": "taggers/averaged_perceptron_tagger",
+        "omw-1.4": "corpora/omw-1.4",
+    }
+
+    for pkg, path in resources.items():
+        try:
+            nltk.data.find(path)
+        except LookupError:
+            nltk.download(pkg, quiet=True)
 
 def clean_text(text: str, lowercase=True) -> str:
     if lowercase:
@@ -124,36 +134,39 @@ def preprocess(texts: List[str], max_seq_len=None):
 
 
 def main():
-    dataset_dirs = [str(dataset)
-                    for dataset in list((REPO_ROOT / "datasets").glob("*/"))]
-    for dataset in dataset_dirs:
-        dataset_name = dataset.split("/")[-1]
-        df = pd.read_csv(f"{dataset}/data.csv")
-        df = df.dropna(subset=['text', 'label'])
-        df['text'] = df['text'].astype(str).str.strip()
-        df = df[df['text'].str.len() > 0]
-        if cap is not None and cap < len(df):
-            df = df.sample(n=cap, random_state=42)
+  ensure_nltk()
 
-        embeddings_path = Path(
-            f"../embeddings/emb_{dataset_name}_{encoder_name}.npy")
-        embeddings_path.parent.mkdir(parents=True, exist_ok=True)
+  dataset_dirs = [str(dataset) for dataset in list((REPO_ROOT / "datasets" ).glob("*/")) if str(dataset) != ""]
+  for dataset in dataset_dirs:
+      dataset_name = dataset.split("/")[-1]
+      df = pd.read_csv(f"{dataset}/data.csv")
+      df = df.dropna(subset=['text', 'label'])
+      df['text'] = df['text'].astype(str).str.strip()
+      df = df[df['text'].str.len() > 0]
+      if cap is not None and cap < len(df):
+          df = df.sample(n=cap, random_state=42)
 
-        texts = df['text'].tolist()
+      output_path = Path(f"../embeddings/emb_{dataset_name}_{encoder_name}.npz")
+      output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if not embeddings_path.exists():
-            print("Generating embeddings")
-            cleaned, tokenized = preprocess(texts)
-            encoder = SBERTEncoder(
-                model_name=sbert_model_name, batch_size=batch_size)
-            embeddings = encoder.fit_transform(
-                device, cleaned, tokenized_texts=tokenized)
+      texts = df['text'].tolist()
+      y_true = df['label'].astype(int).to_numpy()
+      print("Generating embeddings")
 
-            np.save(embeddings_path, embeddings)
-        else:
-            print(f"Embeddings already exist for {dataset_name}")
+      cleaned, tokenized = preprocess(texts)
 
-        print(f"Dataset: {dataset_name}, Embeddings shape: {embeddings.shape}")
+      encoder = SBERTEncoder(
+          model_name=sbert_model_name,
+          batch_size=batch_size
+      )
 
-if __name__ == "__main__":
-    main()
+      embeddings = encoder.fit_transform(
+          device, cleaned, tokenized_texts=tokenized
+      )
+
+      np.savez(
+          output_path,
+          embeddings=embeddings,
+          labels=y_true,
+          texts=np.array(cleaned)
+      )
