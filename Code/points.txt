@@ -1,0 +1,1 @@
+1. Deep clustering methods like IDEC provide limited but consistent gains when applied on top of strong pretrained embeddings.

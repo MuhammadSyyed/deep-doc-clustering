@@ -1,0 +1,11 @@
+model,dataset,encoder,rows,pca_components,NMI,ARI,ACC,Purity
+KMeans,agnews,tfidf,127600,249,0.0255,0.0019,0.2778,0.278
+KMeans,20newsgroups,sbert,18331,248,0.5308,0.3675,0.5655,0.5692
+KMeans,bbcnews,tfidf,2225,244,0.9045,0.9301,0.9708,0.9708
+KMeans,reuters,tfidf,7674,230,0.534,0.3583,0.4881,0.8247
+KMeans,dbpedia,tfidf,150000,229,0.5186,0.1337,0.3396,0.4266
+KMeans,20newsgroups,tfidf,18331,252,0.4015,0.1333,0.3699,0.3975
+KMeans,bbcnews,sbert,2225,160,0.8776,0.906,0.9609,0.9609
+KMeans,reuters,sbert,7674,179,0.639,0.4739,0.6142,0.9029
+KMeans,dbpedia,sbert,150000,209,0.79,0.6895,0.7888,0.8162
+KMeans,agnews,sbert,127600,235,0.5774,0.5932,0.8085,0.8085

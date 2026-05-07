@@ -9,6 +9,9 @@ import re
 from glob import glob
 from abc import ABC, abstractmethod
 from sentence_transformers import SentenceTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import TruncatedSVD
+from sklearn.preprocessing import normalize
 from typing import List, Optional
 import string
 from typing import List
@@ -30,7 +33,7 @@ batch_size = 64
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
-encoder_name = "sbert"
+
 sbert_model_name = "all-mpnet-base-v2"
 _stopwords = set(stopwords.words("english"))
 _lemmatizer = WordNetLemmatizer()
@@ -73,6 +76,26 @@ class SBERTEncoder(BaseEncoder):
             convert_to_numpy=True,
             normalize_embeddings=True,
         ).astype(np.float32)
+    
+class TFIDFEncoder(BaseEncoder):
+
+    def fit_transform(self, cleaned_texts=None, **kwargs):
+
+        vectorizer = TfidfVectorizer(
+            max_features=20000,
+            ngram_range=(1, 2),
+            sublinear_tf=True
+        )
+
+        X = vectorizer.fit_transform(cleaned_texts)
+
+        n_comp = min(300, X.shape[1] - 1, X.shape[0] - 1)
+        if n_comp > 0:
+            X = TruncatedSVD(n_components=n_comp,
+                             random_state=42).fit_transform(X)
+
+        return normalize(X.astype(np.float32))
+
 
 def ensure_nltk():
     resources = {
@@ -133,7 +156,7 @@ def preprocess(texts: List[str], max_seq_len=None):
     return cleaned, tokenized
 
 
-def main():
+def main(encoder_name:str):
   ensure_nltk()
 
   dataset_dirs = [str(dataset) for dataset in list((REPO_ROOT / "datasets" ).glob("*/")) if str(dataset) != ""]
@@ -155,14 +178,19 @@ def main():
 
       cleaned, tokenized = preprocess(texts)
 
-      encoder = SBERTEncoder(
-          model_name=sbert_model_name,
-          batch_size=batch_size
-      )
+      if encoder_name == "sbert":
+          encoder = SBERTEncoder(
+              model_name=sbert_model_name,
+              batch_size=batch_size
+          )
+          embeddings = encoder.fit_transform(device, cleaned, tokenized_texts=tokenized)
 
-      embeddings = encoder.fit_transform(
-          device, cleaned, tokenized_texts=tokenized
-      )
+      elif encoder_name == "tfidf":
+          encoder = TFIDFEncoder(
+                model_name="tfidf",
+                batch_size=batch_size
+          )
+          embeddings = encoder.fit_transform(cleaned, tokenized_texts=tokenized)
 
       np.savez(
           output_path,
@@ -170,3 +198,7 @@ def main():
           labels=y_true,
           texts=np.array(cleaned)
       )
+
+if __name__ == "__main__":
+    encoder_name = "tfidf"  # or "sbert"
+    main(encoder_name)
