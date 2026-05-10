@@ -48,3 +48,13 @@ IDEC effectiveness depends jointly on:
 * embedding type
 * dataset semantic structure
 * model capacity
+
+KMeans - are embeddings clusterable directly?
+
+IDEC - does latent refinement help?
+
+SDCN - does graph structure help further?
+
+
+############## Does incorporating neighborhood graph information improve clustering over latent-only refinement?
+
