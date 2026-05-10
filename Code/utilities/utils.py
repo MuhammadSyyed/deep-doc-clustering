@@ -155,3 +155,106 @@ def log_experiment(
         df = pd.DataFrame([row])
 
     df.to_csv(csv_path, index=False)
+
+
+def parse_history(history):
+    pretrain_epochs = []
+    pretrain_loss = []
+
+    cluster_epochs = []
+    total_loss = []
+    recon_loss = []
+    kl_loss = []
+    delta = []
+
+    eval_epochs = []
+    nmi = []
+    ari = []
+    acc = []
+
+    for h in history:
+        if h["stage"] == "pretrain":
+            pretrain_epochs.append(h["epoch"])
+            pretrain_loss.append(h["reconstruction_loss"])
+
+        elif h["stage"] == "cluster":
+            if "total_loss" in h:
+                cluster_epochs.append(h["epoch"])
+                total_loss.append(h["total_loss"])
+                recon_loss.append(h["reconstruction_loss"])
+                kl_loss.append(h["kl_loss"])
+                delta.append(h["delta"])
+
+        elif h["stage"] == "eval":
+            eval_epochs.append(h["epoch"])
+            nmi.append(h["NMI"])
+            ari.append(h["ARI"])
+            acc.append(h["ACC"])
+
+    return {
+        "pretrain": (pretrain_epochs, pretrain_loss),
+        "cluster": (cluster_epochs, total_loss, recon_loss, kl_loss, delta),
+        "eval": (eval_epochs, nmi, ari, acc)
+    }
+
+
+def plot_pretrain(data):
+    epochs, loss = data
+
+    plt.figure()
+    plt.plot(epochs, loss)
+    plt.xlabel("Epoch")
+    plt.ylabel("Reconstruction Loss")
+    plt.title("Pretraining Curve")
+    plt.show()
+
+def plot_cluster_losses(data):
+    epochs, total, recon, kl, delta = data
+
+    plt.figure()
+    plt.plot(epochs, total, label="Total")
+    plt.plot(epochs, recon, label="Reconstruction")
+    plt.plot(epochs, kl, label="KL")
+    plt.legend()
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Clustering Loss Breakdown")
+    plt.show()
+
+def plot_delta(data):
+    epochs, _, _, _, delta = data
+
+    plt.figure()
+    plt.plot(epochs, delta)
+    plt.xlabel("Epoch")
+    plt.ylabel("Delta")
+    plt.title("Cluster Assignment Change")
+    plt.show()
+
+def plot_metrics(data):
+    epochs, nmi, ari, acc = data
+
+    plt.figure()
+    plt.plot(epochs, nmi, label="NMI")
+    plt.plot(epochs, ari, label="ARI")
+    plt.plot(epochs, acc, label="ACC")
+    plt.legend()
+    plt.xlabel("Epoch")
+    plt.ylabel("Score")
+    plt.title("Clustering Metrics Over Time")
+    plt.show()
+
+def plot_kl_vs_acc(cluster_data, eval_data):
+    c_epochs, _, _, kl, _ = cluster_data
+    e_epochs, _, _, acc = eval_data
+
+    # align epochs
+    acc_map = dict(zip(e_epochs, acc))
+    aligned_acc = [acc_map.get(e, None) for e in c_epochs]
+
+    plt.figure()
+    plt.plot(kl, aligned_acc, marker='o')
+    plt.xlabel("KL Loss")
+    plt.ylabel("Accuracy")
+    plt.title("KL vs Accuracy Relationship")
+    plt.show()

@@ -1,0 +1,10 @@
+IDEC-reduced-dim,agnews,tfidf,127600,249,0.4128,0.4143,0.6743,0.6743
+IDEC-recuced-dim,20newsgroups,sbert,18331,248,0.4424,0.2543,0.3937,0.4445
+IDEC-recuced-dim,bbcnews,tfidf,2225,244,0.4531,0.3286,0.5789,0.6234
+IDEC-recuced-dim,reuters,tfidf,7674,230,0.3502,0.1877,0.4242,0.7417
+IDEC-recuced-dim,dbpedia,tfidf,150000,229,0.7089,0.608,0.7285,0.7597
+IDEC-recuced-dim,20newsgroups,tfidf,18331,252,0.3644,0.1978,0.3803,0.3914
+IDEC-recuced-dim,bbcnews,sbert,2225,160,0.5286,0.4301,0.6355,0.6413
+IDEC-recuced-dim,reuters,sbert,7674,179,0.4699,0.3469,0.5106,0.7858
+IDEC-recuced-dim,dbpedia,sbert,150000,209,0.638,0.5151,0.6218,0.6426
+IDEC-recuced-dim,agnews,sbert,127600,235,0.5108,0.4926,0.7306,0.7306
