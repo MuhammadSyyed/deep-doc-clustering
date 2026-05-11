@@ -233,13 +233,13 @@ with tab_datasets:
             text_auto=True,
         )
         docs_fig.update_layout(**plotly_dark_layout)
-        st.plotly_chart(docs_fig, use_container_width=True)
+        st.plotly_chart(docs_fig, width='stretch')
 
         st.dataframe(
             filtered_datasets.sort_values(by=["dataset"], ascending=True)[
                 ["dataset", "used_docs", "n_docs", "n_classes", "source", "labels_preview", "data_path"]
             ],
-            use_container_width=True,
+            width='stretch',
         )
 
 with tab_results:
@@ -284,7 +284,7 @@ with tab_results:
                 title=f"{metric} by Dataset and Encoder",
             )
         summary_fig.update_layout(**plotly_dark_layout)
-        st.plotly_chart(summary_fig, use_container_width=True)
+        st.plotly_chart(summary_fig, width='stretch')
 
         pivot = (
             filtered_results.pivot_table(
@@ -295,7 +295,7 @@ with tab_results:
             .reset_index()
             .sort_values(by=["dataset", "encoder", "model"], ascending=True)
         )
-        st.dataframe(pivot, use_container_width=True)
+        st.dataframe(pivot, width='stretch')
 
 with tab_visuals:
     st.subheader("Cluster Plot Gallery")
