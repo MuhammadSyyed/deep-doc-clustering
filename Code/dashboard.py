@@ -11,7 +11,7 @@ import streamlit as st
 
 BASE_DIR = Path(__file__).resolve().parent
 DATASETS_DIR = BASE_DIR / "datasets"
-RESULTS_PATH = BASE_DIR / "outputs" / "results.csv"
+RESULTS_PATH = BASE_DIR / "outputs" / "performance_metrics" /"results.csv"
 PLOTS_DIR = BASE_DIR / "outputs" / "plots"
 
 
