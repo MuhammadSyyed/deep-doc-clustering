@@ -7,3 +7,4 @@ others/
 datasets/
 embeddings/
 *env/
+*.zip
