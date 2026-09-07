@@ -200,5 +200,5 @@ def main(encoder_name:str):
       )
 
 if __name__ == "__main__":
-    encoder_name = "tfidf"  # or "sbert"
+    encoder_name = "sbert"  # or "tfidf"
     main(encoder_name)
