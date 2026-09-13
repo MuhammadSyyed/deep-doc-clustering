@@ -44,3 +44,13 @@ SDCN+SemRefine,reuters,sbert,7674,179,0.3952,0.1731,0.3683,0.7127
 SDCN+SemRefine,20newsgroups,sbert,18331,248,0.2059,0.0954,0.1764,0.182
 SDCN+SemRefine,agnews,sbert,20000,233,0.5126,0.5146,0.7456,0.7456
 SDCN+SemRefine,dbpedia,sbert,20000,207,0.6889,0.5131,0.5584,0.5629
+SDCN+SemRefineGamma0.1,bbcnews,sbert,2225,160,0.8609,0.8836,0.951,0.951
+SDCN+SemRefineGamma0.1,reuters,sbert,7674,179,0.381,0.1854,0.3621,0.7189
+SDCN+SemRefineGamma0.1,20newsgroups,sbert,18331,248,0.1227,0.0352,0.1111,0.1158
+SDCN+SemRefineGamma0.1,agnews,sbert,20000,233,0.4765,0.4748,0.733,0.733
+SDCN+SemRefineGamma0.1,dbpedia,sbert,20000,207,0.7193,0.5622,0.6687,0.6742
+SDCN+SemRefineGamma0.5,bbcnews,sbert,2225,160,0.8687,0.8915,0.9546,0.9546
+SDCN+SemRefineGamma0.5,reuters,sbert,7674,179,0.39,0.1662,0.36,0.7121
+SDCN+SemRefineGamma0.5,20newsgroups,sbert,18331,248,0.1105,0.0313,0.1065,0.114
+SDCN+SemRefineGamma0.5,agnews,sbert,20000,233,0.3693,0.3353,0.5744,0.5744
+SDCN+SemRefineGamma0.5,dbpedia,sbert,20000,207,0.6784,0.4873,0.5514,0.5612
