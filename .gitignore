@@ -1,4 +1,5 @@
 .DS_Store
+.cursor/
 .ipynb_checkpoints/
 __pycache__/
 __MACOSX/
