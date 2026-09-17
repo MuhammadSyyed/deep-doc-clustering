@@ -84,3 +84,10 @@ SDCN+SemRefine+DynamicKNN+CVCL_warmup20,reuters,sbert,7674,179,0.5385,0.5549,0.6
 SDCN+SemRefine+DynamicKNN+CVCL_warmup20,20newsgroups,sbert,18331,248,0.361,0.1759,0.3203,0.3442
 SDCN+SemRefine+DynamicKNN+CVCL_warmup20,agnews,sbert,20000,233,0.5156,0.5355,0.7772,0.7772
 SDCN+SemRefine+DynamicKNN+CVCL_warmup20,dbpedia,sbert,20000,207,0.695,0.5667,0.7234,0.7447
+SDCN+SemRefine+DynamicKNN+CVCL_warmup0,bbcnews,sbert,2225,160,0.7901,0.7618,0.8858,0.8858
+SDCN+SemRefine+DynamicKNN+CVCL_warmup0,reuters,sbert,7674,179,0.5378,0.5527,0.671,0.7701
+SDCN+SemRefine+DynamicKNN+CVCL_warmup0,bbcnews,sbert,2225,160,0.7868,0.7597,0.8849,0.8849
+SDCN+SemRefine+DynamicKNN+CVCL_warmup0,reuters,sbert,7674,179,0.5373,0.5521,0.6707,0.7699
+SDCN+SemRefine+DynamicKNN+CVCL_warmup0,20newsgroups,sbert,18331,248,0.3611,0.176,0.3204,0.3443
+SDCN+SemRefine+DynamicKNN+CVCL_warmup0,agnews,sbert,20000,233,0.5159,0.5357,0.7773,0.7773
+SDCN+SemRefine+DynamicKNN+CVCL_warmup0,dbpedia,sbert,20000,207,0.695,0.5667,0.7234,0.7447
