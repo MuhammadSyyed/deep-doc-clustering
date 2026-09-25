@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 import pandas as pd
@@ -56,7 +57,7 @@ def get_metrics(X, y, y_pred):
     }
 
 
-def plot_and_save_clusters(dataset, encoder_name, clusterer, X, y_pred, n_clusters, number_of_components):
+def plot_and_save_clusters(ablation_name, dataset, encoder_name, clusterer, X, y_pred, n_clusters, number_of_components):
     pca = PCA(n_components=2, random_state=42)
     X_2d = pca.fit_transform(X)
     plt.figure(figsize=(8, 6))
@@ -65,7 +66,9 @@ def plot_and_save_clusters(dataset, encoder_name, clusterer, X, y_pred, n_cluste
     plt.ylabel("Principal Component 2")
     plt.title(
         f"{dataset}-{encoder_name} - {clusterer} {n_clusters} Clusters (PCA)")
-    save_path = f"../outputs/plots/{dataset}_{encoder_name}_{clusterer.lower()}_clusters_k{n_clusters}_components{number_of_components}.png"
+
+    os.makedirs(f"../outputs/plots/{ablation_name}", exist_ok=True)
+    save_path = f"../outputs/plots/{ablation_name}/{dataset}_{encoder_name}_{clusterer.lower()}_clusters_k{n_clusters}_components{number_of_components}.png"
     plt.savefig(save_path, dpi=500)
     plt.show()
 
