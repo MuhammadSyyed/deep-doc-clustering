@@ -7,5 +7,6 @@ artifacts/
 others/
 datasets/
 embeddings/
+Findings/
 *env/
 *.zip
